@@ -1,5 +1,5 @@
 """
-LangGraph workflow that routes agent actions to the appropriate CrewAI agent.
+LangGraph workflow that routes agent actions to the appropriate agent.
 
 Flow:
   request -> router_node -> [scheduler|notifier|task_manager|availability] -> result
@@ -24,13 +24,13 @@ class AgentState(TypedDict):
 
 def _router(state: AgentState) -> str:
     action = state["action"]
-    if action in ("schedule_shift", "assign_shift", "detect_gaps"):
+    if action in ("assign_resource", "allocate_engineer", "optimize_assignments"):
         return "scheduler"
     if action in ("send_notification", "alert_team"):
         return "notifier"
     if action in ("create_task", "update_task", "complete_task"):
         return "task_manager"
-    if action in ("check_coverage", "flag_conflict"):
+    if action in ("check_coverage", "detect_overallocation", "flag_conflict"):
         return "availability"
     return "scheduler"  # default
 

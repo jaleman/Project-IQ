@@ -2,18 +2,29 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authApi, eventsApi, projectsApi } from "@/lib/api";
-import type { Event, Project, ProjectDetail, ProjectStatus, User } from "@/lib/types";
+import { authApi, eventsApi, projectsApi, tasksApi } from "@/lib/api";
+import type { Event, Project, ProjectDetail, ProjectStatus, Task, TaskStatus, User } from "@/lib/types";
 import { format } from "date-fns";
-import { CalendarPlus, FolderPlus, ChevronDown, ChevronRight } from "lucide-react";
+import { CalendarPlus, FolderPlus, ChevronDown, ChevronRight, SquareCheck, X } from "lucide-react";
 
-const STATUS_BADGE: Record<ProjectStatus, string> = {
+type DerivedStatus = "pending" | "active" | "on_hold" | "done";
+
+const DERIVED_BADGE: Record<DerivedStatus, string> = {
+  pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   active: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   on_hold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  completed: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
+  done: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
 };
 
+function deriveProjectStatus(tasks: Task[]): DerivedStatus {
+  if (tasks.length === 0) return "pending";
+  if (tasks.every((t) => t.status === "done")) return "done";
+  if (tasks.some((t) => t.status === "in_progress")) return "active";
+  return "pending";
+}
+
 const TASK_STATUS_BADGE: Record<string, string> = {
+  planned: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
@@ -32,6 +43,13 @@ export default function CalendarPage() {
 
   const events: Event[] = eventsData?.data?.data ?? [];
   const projects: Project[] = projectsData?.data?.data ?? [];
+
+  const { data: allTasksData } = useQuery({ queryKey: ["tasks"], queryFn: () => tasksApi.list() });
+  const allTasks: Task[] = allTasksData?.data?.data ?? [];
+  const tasksByProject = allTasks.reduce<Record<number, Task[]>>((acc, t) => {
+    if (t.project_id != null) (acc[t.project_id] ??= []).push(t);
+    return acc;
+  }, {});
 
   // Which project is expanded
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -79,6 +97,23 @@ export default function CalendarPage() {
     onError: (e: Error) => setFormError(e.message),
   });
 
+  const [projectFilter, setProjectFilter] = useState<DerivedStatus | "all">("all");
+
+  // Quick-add task state
+  const [quickTaskProject, setQuickTaskProject] = useState<Project | null>(null);
+  const [quickTaskForm, setQuickTaskForm] = useState({
+    title: "", notes: "", startDate: "", dueDate: "", estimatedHours: "",
+  });
+  const createTaskMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => tasksApi.create(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      if (quickTaskProject) qc.invalidateQueries({ queryKey: ["project", quickTaskProject.id] });
+      setQuickTaskProject(null);
+      setQuickTaskForm({ title: "", notes: "", startDate: "", dueDate: "", estimatedHours: "" });
+    },
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -117,7 +152,7 @@ export default function CalendarPage() {
 
         {/* Projects */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-slate-700 dark:text-slate-200">Projects</h2>
             {isAdminOrLeader && (
               <button
@@ -128,24 +163,67 @@ export default function CalendarPage() {
               </button>
             )}
           </div>
+
+          {/* Filter pills */}
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {(["all", "pending", "active", "done"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setProjectFilter(f)}
+                className={`text-xs px-2.5 py-0.5 rounded-full font-medium transition border ${
+                  projectFilter === f
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-2">
             {projects.length === 0 && <p className="text-slate-400 dark:text-slate-500 text-sm">No projects yet.</p>}
-            {projects.map((p) => (
+            {projects
+              .filter((p) =>
+                projectFilter === "all"
+                  ? true
+                  : deriveProjectStatus(tasksByProject[p.id] ?? []) === projectFilter
+              )
+              .map((p) => (
               <div key={p.id} className="border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
                 {/* Project row */}
-                <button
-                  type="button"
-                  onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition text-left"
-                >
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                    className="flex items-center gap-2 flex-1 text-left"
+                  >
                     {expandedId === p.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     <span className="font-medium text-slate-800 dark:text-slate-100 text-sm">{p.name}</span>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const ds = deriveProjectStatus(tasksByProject[p.id] ?? []);
+                      return (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${DERIVED_BADGE[ds]}`}>
+                          {ds.replace("_", " ")}
+                        </span>
+                      );
+                    })()}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickTaskProject(p);
+                        setQuickTaskForm({ title: "", notes: "", startDate: "", dueDate: "", estimatedHours: "" });
+                      }}
+                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition font-medium"
+                    >
+                      <SquareCheck size={13} />
+                      New Task
+                    </button>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[p.status]}`}>
-                    {p.status.replace("_", " ")}
-                  </span>
-                </button>
+                </div>
 
                 {/* Expanded task list */}
                 {expandedId === p.id && (
@@ -184,7 +262,7 @@ export default function CalendarPage() {
                   </div>
                 )}
               </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>
@@ -245,6 +323,108 @@ export default function CalendarPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Quick Add Task Modal */}
+      {quickTaskProject && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createTaskMutation.mutate({
+                title: quickTaskForm.title.trim(),
+                notes: quickTaskForm.notes.trim() || null,
+                project_id: quickTaskProject.id,
+                start_date: quickTaskForm.startDate ? new Date(quickTaskForm.startDate).toISOString() : null,
+                due_date: quickTaskForm.dueDate ? new Date(quickTaskForm.dueDate).toISOString() : null,
+                estimated_hours: quickTaskForm.estimatedHours ? Number(quickTaskForm.estimatedHours) : null,
+                status: "pending" as TaskStatus,
+                is_private: false,
+              });
+            }}
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">New Task</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Project: <span className="font-medium text-brand-600 dark:text-brand-400">{quickTaskProject.name}</span>
+                </p>
+              </div>
+              <button type="button" onClick={() => setQuickTaskProject(null)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Title</label>
+              <input
+                autoFocus
+                required
+                value={quickTaskForm.title}
+                onChange={(e) => setQuickTaskForm({ ...quickTaskForm, title: e.target.value })}
+                placeholder="e.g. Implement login flow"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Notes</label>
+              <textarea
+                value={quickTaskForm.notes}
+                onChange={(e) => setQuickTaskForm({ ...quickTaskForm, notes: e.target.value })}
+                rows={2}
+                placeholder="Optional details"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Start date</label>
+                <input
+                  type="date"
+                  value={quickTaskForm.startDate}
+                  onChange={(e) => setQuickTaskForm({ ...quickTaskForm, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Due date</label>
+                <input
+                  type="date"
+                  value={quickTaskForm.dueDate}
+                  onChange={(e) => setQuickTaskForm({ ...quickTaskForm, dueDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Estimated hours</label>
+              <input
+                type="number"
+                min={1}
+                value={quickTaskForm.estimatedHours}
+                onChange={(e) => setQuickTaskForm({ ...quickTaskForm, estimatedHours: e.target.value })}
+                placeholder="e.g. 8"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setQuickTaskProject(null)}
+                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={createTaskMutation.isPending || !quickTaskForm.title.trim()}
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition disabled:opacity-60"
+              >
+                {createTaskMutation.isPending ? "Creating…" : "Create Task"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

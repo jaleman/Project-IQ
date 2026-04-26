@@ -28,7 +28,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Whisper model at startup
 _model: Optional[whisper.Whisper] = None
 
 
@@ -43,15 +42,17 @@ def get_model() -> whisper.Whisper:
 def _map_to_action(text: str) -> tuple[str, dict]:
     """Map transcribed text to a backend agent action."""
     lower = text.lower()
-    if any(w in lower for w in ["gap", "coverage", "short-staffed"]):
+    if any(w in lower for w in ["overalloc", "overload", "too much", "too many"]):
+        return "detect_overallocation", {"query": text}
+    if any(w in lower for w in ["assign", "allocate", "resource", "who should"]):
+        return "assign_resource", {"query": text}
+    if any(w in lower for w in ["capacity", "available", "bandwidth", "free"]):
         return "check_coverage", {"query": text}
-    if any(w in lower for w in ["schedule", "shift", "assign"]):
-        return "schedule_shift", {"query": text}
     if any(w in lower for w in ["task", "todo", "complete", "done"]):
         return "create_task", {"query": text}
     if any(w in lower for w in ["notify", "alert", "send"]):
         return "send_notification", {"query": text}
-    return "detect_gaps", {"query": text}
+    return "detect_overallocation", {"query": text}
 
 
 @app.post("/transcribe")

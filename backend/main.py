@@ -7,17 +7,23 @@ from sqlalchemy import text
 
 from config import settings
 from database import engine, Base
-from routers import auth, users, events, tasks, shifts, agents, notifications, projects, feedback
+from routers import auth, users, events, tasks, assignments, agents, notifications, projects, feedback
 
 logger = structlog.get_logger()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables (Alembic handles migrations in production)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Lightweight idempotent migrations for dev (Postgres)
+
+        # --- Task status enum: add 'planned' value ---
+        await conn.execute(text("ALTER TYPE taskstatus ADD VALUE IF NOT EXISTS 'planned'"))
+
+        # --- Remove legacy shifts table ---
+        await conn.execute(text("DROP TABLE IF EXISTS shifts CASCADE"))
+
+        # --- Notifications columns ---
         await conn.execute(text(
             "ALTER TABLE notifications "
             "ADD COLUMN IF NOT EXISTS task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE"
@@ -28,7 +34,8 @@ async def lifespan(app: FastAPI):
         await conn.execute(text(
             "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE"
         ))
-        # Projects
+
+        # --- Projects ---
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS projects (
                 id SERIAL PRIMARY KEY,
@@ -43,7 +50,33 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE tasks "
             "ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL"
         ))
-        # Feedback
+
+        # --- Task scheduling fields ---
+        await conn.execute(text(
+            "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_hours INTEGER"
+        ))
+
+        # --- Assignments ---
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS assignments (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                start_date TIMESTAMPTZ NOT NULL,
+                end_date TIMESTAMPTZ,
+                allocation_pct INTEGER NOT NULL DEFAULT 100,
+                status VARCHAR(20) NOT NULL DEFAULT 'planned',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """))
+
+        # --- Feedback ---
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS feedback (
                 id SERIAL PRIMARY KEY,
@@ -59,6 +92,7 @@ async def lifespan(app: FastAPI):
         await conn.execute(text(
             "ALTER TABLE feedback ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ"
         ))
+
     logger.info("ProjectIQ backend started", model=settings.ollama_model)
     yield
     await engine.dispose()
@@ -68,7 +102,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ProjectIQ API",
     version="0.1.0",
-    description="AI-powered employee scheduling platform",
+    description="AI-powered engineering resource management platform",
     lifespan=lifespan,
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
@@ -87,7 +121,7 @@ app.include_router(auth, prefix="/api/auth", tags=["auth"])
 app.include_router(users, prefix="/api/users", tags=["users"])
 app.include_router(events, prefix="/api/events", tags=["events"])
 app.include_router(tasks, prefix="/api/tasks", tags=["tasks"])
-app.include_router(shifts, prefix="/api/shifts", tags=["shifts"])
+app.include_router(assignments, prefix="/api/assignments", tags=["assignments"])
 app.include_router(agents, prefix="/api/agents", tags=["agents"])
 app.include_router(notifications, prefix="/api/notifications", tags=["notifications"])
 app.include_router(projects, prefix="/api/projects", tags=["projects"])

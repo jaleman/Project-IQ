@@ -18,7 +18,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Helper to unwrap the {data, error, status} envelope
 api.interceptors.response.use(
   (res) => res,
   (error) => {
@@ -70,16 +69,16 @@ export const tasksApi = {
   delete: (id: number) => api.delete(`/api/tasks/${id}`),
 };
 
-// ─── Shifts ──────────────────────────────────────────────────────────────────
-export const shiftsApi = {
-  list: () => api.get("/api/shifts/"),
-  get: (id: number) => api.get(`/api/shifts/${id}`),
-  create: (payload: Record<string, unknown>) => api.post("/api/shifts/", payload),
+// ─── Assignments ─────────────────────────────────────────────────────────────
+export const assignmentsApi = {
+  list: () => api.get("/api/assignments/"),
+  get: (id: number) => api.get(`/api/assignments/${id}`),
+  create: (payload: Record<string, unknown>) => api.post("/api/assignments/", payload),
   update: (id: number, payload: Record<string, unknown>) =>
-    api.patch(`/api/shifts/${id}`, payload),
-  requestSwap: (id: number, requestedBy: number) =>
-    api.post(`/api/shifts/${id}/swap-request`, { requested_by: requestedBy }),
-  approveSwap: (id: number) => api.post(`/api/shifts/${id}/approve-swap`),
+    api.patch(`/api/assignments/${id}`, payload),
+  delete: (id: number) => api.delete(`/api/assignments/${id}`),
+  overallocation: (userId: number) =>
+    api.get(`/api/assignments/user/${userId}/overallocation`),
 };
 
 // ─── Agents ──────────────────────────────────────────────────────────────────

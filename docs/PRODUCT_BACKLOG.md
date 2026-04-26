@@ -32,32 +32,19 @@
 
 | Item | Notes |
 |---|---|
-| Replace list-of-shifts with `react-big-calendar` (or `@fullcalendar/react`) | Month / week / day views. |
-| Drag-to-create a shift | Opens a prefilled modal (user picker, start/end). |
-| Drag-to-reschedule existing shift | PATCH `/api/shifts/{id}`. |
-| Color-code shifts by user/role | Use a deterministic palette per `user_id`. |
+| Replace event list with `react-big-calendar` (or `@fullcalendar/react`) | Month / week / day views showing tasks by due date. |
+| Color-code tasks by status/project | Use a deterministic palette per project or status. |
 
-### Shifts polish
+### Calendar page improvements
 
 | Item | Notes |
 |---|---|
-| Shift create/edit modal in UI (currently only via Swagger) | Reuse the modal pattern from Tasks. |
-| Swap-request workflow end-to-end | Member requests → leader approves → notification fires for both parties. |
-| Conflict detection | Server-side overlap check on create/update; warning chip in UI. |
-
-### Projects feature
-
-| Item | Notes |
-|---|---|
-| **Projects backend** — model, schema, CRUD router (`GET /api/projects/`, `POST`, `PATCH /{id}`, `DELETE /{id}`) | Calendar page already calls `/api/projects/` — currently 404s for all users. |
-| **Link events/tasks to a project** | Foreign key `project_id` on `events` and `tasks`; filter views by project. |
-| **Drag event → create task under a project** | Calendar UX: drag an upcoming event onto a project card to auto-create a task with no resource assigned. |
+| **Replace Upcoming Events with My Tasks view** | Replace the Upcoming Events panel on the Calendar page with a personal task list. The current user should only see tasks assigned to them regardless of which project is selected. Should support the same status filter pills (pending / planned / in progress / done) and show project badge, due date, and estimated hours per row. Admins and leaders should also only see their own tasks in this panel (use the Tasks page for a full view). |
 
 ### Tasks improvements
 
 | Item | Notes |
 |---|---|
-| **Edit task** modal (title, notes, private flag) | Currently we only cycle status / delete. |
 | Assign task to another user | UI for `shared_with`; consider switching to a join table later. |
 | Due dates + reminder notification job | Reuse the lifecycle notification model. |
 
@@ -65,7 +52,7 @@
 
 | Item | Notes |
 |---|---|
-| Wire **Dashboard Quick Actions** to real flows that mutate the DB | Scheduler suggests assignments → user accepts → shifts created. |
+| Wire **Dashboard Quick Actions** to real flows that mutate the DB | Scheduler suggests assignments → user accepts → shifts created. Quick Actions panel should only be visible to **admin and leader** roles — hide entirely for members. |
 | **Chat panel** ("Ask the AI") backed by `/api/agents/run` | Persistent thread per user. |
 | **Token streaming** (SSE) | Users see tokens as they generate; better UX with Gemma's pace. |
 
@@ -74,9 +61,9 @@
 | Item | Notes |
 |---|---|
 | Set Telegram + Discord bot tokens in `.env`; verify both come online | One-time secret setup. |
-| Implement `/myshifts`, `/swap`, `/done <task>` commands | Hits FastAPI as the linked user. Requires a user-link flow first. |
+| Implement `/mytasks`, `/done <task>`, `/assignments` commands | Hits FastAPI as the linked user. Requires a user-link flow first. |
 | User linking flow | `/link <one-time-code>` from bot → stores `telegram_id` / `discord_id` on user. |
-| Push notifications via bot when a shift is assigned | Trigger from `routers/shifts.py` create/assign. |
+| Push notifications via bot when a task is assigned | Trigger from `routers/tasks.py` create/assign. |
 
 ### Voice MVP
 
@@ -84,7 +71,7 @@
 |---|---|
 | Add `voice/` to `docker-compose.yml` | Whisper `base` model is enough. |
 | Endpoint: `POST /api/voice/transcribe` (audio → text → `/api/agents/run` → response) | Single round-trip for demos. |
-| Demo flow: record on phone → see shift created | "Schedule John Saturday 9-1." |
+| Demo flow: record on phone → see assignment created | "Assign John to the auth task at 50%." |
 
 ---
 
@@ -121,6 +108,16 @@
 
 | Item | When |
 |---|---|
+| **Shift → Assignment refactor** — Dropped `Shift` model entirely; added `Assignment` (user_id, task_id, start_date, end_date, allocation_pct, status: planned\|active\|on_hold\|completed). `AssignmentService.detect_overallocation()` added. All shift references removed from agents, bots, voice service, frontend. | Apr 2026 |
+| **Task scheduling fields** — Added `start_date`, `due_date`, `estimated_hours` to `Task` model and schema. | Apr 2026 |
+| **Task modal improvements** — Project dropdown, start/due date pickers, estimated hours field, edit pre-fill. | Apr 2026 |
+| **Assign Resource UI** — `AssignModal` on Tasks page: engineer picker, allocation %, start/end dates, status selector. Assigned resources shown as colour-coded chips under each task row with inline remove (×). | Apr 2026 |
+| **Task status: `planned` added** — New purple pill state; status dropdown replaces cycling button (any-state picker). | Apr 2026 |
+| **Projects: New Task from Calendar** — Checkbox icon + "New Task" button on each project row opens a task modal pre-populated with the project. | Apr 2026 |
+| **Projects: derived status pill** — Project status pill now derived from task states (pending/active/done) instead of a stored enum. | Apr 2026 |
+| **Projects: filter pills** — All / pending / active / done filter pills above the project list. | Apr 2026 |
+| **Projects: role-scoped list** — Members only see projects they have a task assigned to; admins/leaders see all. | Apr 2026 |
+| **Edit task** modal (title, notes, project, dates, hours, private flag) — Full edit support added. | Apr 2026 |
 | **Cleanup** — removed `crewai` from `backend/requirements.txt`; switched all agents to direct Ollama calls. | Apr 2026 |
 | **Avatar real initial** — `TopBar` derives initial from `user.name` via `/api/auth/me`. | Apr 2026 |
 | **Dark mode** — Tailwind `darkMode: "class"` strategy; `ThemeProvider` context (localStorage persistence + `prefers-color-scheme` fallback); sun/moon toggle in TopBar; Settings modal with Light/Dark selector; full `dark:` coverage across all pages, modals, inputs, badges, and stat cards ([PR #1](https://github.com/jaleman/Project-IQ/pull/1)) | Apr 2026 |

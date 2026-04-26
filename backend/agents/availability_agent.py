@@ -1,5 +1,5 @@
 """
-Availability Agent — monitors coverage windows and flags conflicts.
+Availability Agent — monitors engineer capacity and flags overallocation.
 Calls Gemma directly via Ollama (OpenAI-compatible API).
 """
 
@@ -13,16 +13,22 @@ from .llm import chat
 logger = structlog.get_logger()
 
 SYSTEM_PROMPT = (
-    "You are an operations analyst who ensures teams are adequately staffed. "
-    "Given availability data, identify coverage gaps, scheduling conflicts, "
-    "and under-staffed time slots. Respond with valid JSON only (no prose, "
-    "no code fences) using keys: gaps (list of time slots), conflicts (list), "
-    "coverage_score (integer 0-100), recommendations (list of strings)."
+    "You are an engineering capacity analyst. "
+    "Given a team's assignment data (user IDs, task IDs, allocation percentages, "
+    "start/end dates), identify engineers who are overallocated (total allocation > 100%), "
+    "engineers with available capacity, and scheduling conflicts where two tasks overlap "
+    "in the same date range for the same engineer. "
+    "Respond with valid JSON only (no prose, no code fences) using keys: "
+    "overallocated (list of user_ids with total_pct), "
+    "available (list of user_ids with available_pct), "
+    "conflicts (list of {user_id, task_ids, overlap_dates}), "
+    "capacity_score (integer 0-100, 100 = perfectly balanced), "
+    "recommendations (list of strings)."
 )
 
 
 async def run(payload: dict, user_id: int) -> Any:
-    user_prompt = f"Availability data: {json.dumps(payload)}"
+    user_prompt = f"Capacity data: {json.dumps(payload)}"
 
     response_text = await chat(SYSTEM_PROMPT, user_prompt)
 

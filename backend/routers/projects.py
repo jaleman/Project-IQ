@@ -23,8 +23,18 @@ async def list_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(select(Project))
-    projects = result.scalars().all()
+    if current_user.role in (UserRole.admin, UserRole.leader):
+        result = await db.execute(select(Project))
+        projects = result.scalars().all()
+    else:
+        # Members see only projects they have at least one task assigned to
+        result = await db.execute(
+            select(Project)
+            .join(Task, Task.project_id == Project.id)
+            .where(Task.user_id == current_user.id)
+            .distinct()
+        )
+        projects = result.scalars().all()
     return ok([ProjectOut.model_validate(p) for p in projects])
 
 

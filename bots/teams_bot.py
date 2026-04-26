@@ -30,8 +30,8 @@ async def handle_message(request: web.Request) -> web.Response:
 
     logging.info("Teams message from %s: %s", from_name, text)
 
-    if any(w in text.lower() for w in ["shift", "schedule", "gap"]):
-        action = "detect_gaps"
+    if any(w in text.lower() for w in ["assign", "overalloc", "overload", "capacity"]):
+        action = "detect_overallocation"
     elif any(w in text.lower() for w in ["task", "todo"]):
         action = "create_task"
     else:
@@ -40,7 +40,6 @@ async def handle_message(request: web.Request) -> web.Response:
     result = await run_agent(action, {"query": text}, BACKEND_TOKEN)
     response_text = result.get("data", {}).get("response", "Unable to process request.")
 
-    # Teams card response
     card = {
         "type": "message",
         "attachments": [

@@ -1,7 +1,8 @@
 export type UserRole = "admin" | "leader" | "member";
-export type TaskStatus = "pending" | "in_progress" | "done";
+export type TaskStatus = "planned" | "pending" | "in_progress" | "done";
 export type ProjectStatus = "active" | "on_hold" | "completed";
 export type FeedbackType = "bug_report" | "feature_request" | "comment" | "other";
+export type AssignmentStatus = "planned" | "active" | "on_hold" | "completed";
 
 export interface User {
   id: number;
@@ -21,16 +22,6 @@ export interface Event {
   created_by: number;
 }
 
-export interface Shift {
-  id: number;
-  user_id: number;
-  event_id: number | null;
-  start_time: string;
-  end_time: string;
-  status: string;
-  swap_requested_by: number | null;
-}
-
 export interface Task {
   id: number;
   user_id: number;
@@ -40,6 +31,20 @@ export interface Task {
   status: TaskStatus;
   is_private: boolean;
   shared_with: string | null;
+  start_date: string | null;
+  due_date: string | null;
+  estimated_hours: number | null;
+  created_at: string;
+}
+
+export interface Assignment {
+  id: number;
+  user_id: number;
+  task_id: number;
+  start_date: string;
+  end_date: string | null;
+  allocation_pct: number;
+  status: AssignmentStatus;
   created_at: string;
 }
 

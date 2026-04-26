@@ -2,7 +2,7 @@
 
 > **Status:** Proof of Concept — live at https://www.whatiskali.dev (Cloudflare Tunnel)
 > **Last Updated:** April 2026
-> **Stack:** Next.js 20 · FastAPI · LangGraph · Ollama (Gemma 4) · PostgreSQL · Redis · Caddy · Docker Compose · Cloudflare Tunnel
+> **Stack:** Next.js · FastAPI · LangGraph · Ollama (Gemma 4) · PostgreSQL 16 · Redis 7 · Caddy · Docker Compose · Cloudflare Tunnel
 
 ---
 
@@ -42,7 +42,8 @@ ProjectIQ is an AI-assisted employee scheduling and task-management app for smal
 | Area | Status |
 |---|---|
 | Auth (JWT, bootstrap-only register, change-password) | ✅ |
-| Users, Events, Shifts, Tasks, Projects CRUD | ✅ |
+| Users, Events, Tasks, Projects, Assignments CRUD (Shift model removed) | ✅ |
+| Assignment model: allocation_pct, status, overallocation detection | ✅ |
 | Lifecycle Notifications (per-task status tracking, archive) | ✅ |
 | AI agents (Scheduler, Notifier, Task Manager, Availability) | ✅ direct LLM responses |
 | Web dashboard, Calendar+Projects, Team, Tasks, Notifications pages | ✅ |
@@ -166,9 +167,9 @@ frontend/
 │   ├── (dashboard)/
 │   │   ├── layout.tsx              # Sidebar + TopBar shell
 │   │   ├── dashboard/page.tsx      # Stat cards + AI quick actions
-│   │   ├── calendar/page.tsx       # Upcoming events + Projects accordion
+│   │   ├── calendar/page.tsx       # Projects accordion (role-scoped) + derived status pills + filter pills + New Task per project
 │   │   ├── team/page.tsx           # Team member list (Add/Delete admin-gated)
-│   │   ├── tasks/page.tsx          # Task list, modal create, status cycling
+│   │   ├── tasks/page.tsx          # Task list; create/edit modal (project, dates, hours); status dropdown; Assign Resource modal; assignee chips with remove
 │   │   └── notifications/page.tsx  # Filters · per-id mark read · archive
 ├── components/
 │   ├── Sidebar.tsx
@@ -177,8 +178,8 @@ frontend/
 │   ├── Providers.tsx               # Wraps app: ThemeProvider + QueryClientProvider
 │   └── StatCard.tsx                # Stat card with dark-aware icon badge tints
 ├── lib/
-│   ├── api.ts                      # Axios + grouped resource APIs (incl. projectsApi)
-│   └── types.ts                    # Includes Project, ProjectDetail, ProjectTaskOut
+│   ├── api.ts                      # Axios + grouped resource APIs: tasksApi, projectsApi, assignmentsApi, usersApi, authApi, notificationsApi
+│   └── types.ts                    # Task, Project, ProjectDetail, Assignment, AssignmentStatus, extended TaskStatus (planned added)
 └── ...config files
 ```
 
@@ -200,7 +201,7 @@ backend/
 │   ├── auth.py            # register (bootstrap-only), login, me, change-password, logout
 │   ├── users.py
 │   ├── events.py
-│   ├── shifts.py          # CRUD + swap request / approve
+│   ├── assignments.py     # CRUD + GET /user/{id}/overallocation
 │   ├── tasks.py           # CRUD + lifecycle notification side-effects
 │   ├── notifications.py   # list (active|archived) · markRead · archive · unarchive
 │   ├── projects.py        # CRUD; detail endpoint joins tasks + user names
@@ -214,7 +215,7 @@ backend/
 │   ├── notifier_agent.py
 │   ├── task_agent.py
 │   └── availability_agent.py
-├── models/                # SQLAlchemy models (User, Event, Shift, Task, Notification, Project)
+├── models/                # SQLAlchemy models (User, Event, Task, Notification, Project, Assignment)
 ├── schemas/               # Pydantic request/response schemas
 ├── services/              # (placeholder for future business-logic extractions)
 ├── alembic/               # Migration skeleton (currently using create_all + ALTER IF NOT EXISTS)
@@ -230,6 +231,10 @@ PostgreSQL 16 (Docker, named volume `pgdata`). The lifespan handler runs:
    - `notifications.task_id`, `notifications.task_status`, `notifications.archived`
    - `projects` table (created if not exists)
    - `tasks.project_id` FK → `projects.id`
+   - `tasks.start_date`, `tasks.due_date`, `tasks.estimated_hours`
+   - `assignments` table (created if not exists)
+   - `ALTER TYPE taskstatus ADD VALUE IF NOT EXISTS 'planned'`
+   - `DROP TABLE IF EXISTS shifts CASCADE` (legacy cleanup)
 
 This is a temporary shortcut. Alembic is scaffolded and will replace this before any non-dev deployment.
 
@@ -257,10 +262,10 @@ A LangGraph state machine routes incoming actions to the right agent function:
 
 | Action keywords | Agent |
 |---|---|
-| `schedule_shift`, `assign_shift`, `detect_gaps` | Scheduler |
+| `assign_resource`, `allocate_engineer`, `optimize_assignments` | Scheduler |
 | `send_notification`, `alert_team` | Notifier |
 | `create_task`, `update_task`, `complete_task` | Task Manager |
-| `check_coverage`, `flag_conflict` | Availability |
+| `detect_overallocation`, `check_coverage`, `flag_conflict` | Availability |
 
 ### 5.2 LLM Adapter — `backend/agents/llm.py`
 
@@ -343,8 +348,8 @@ class User(Base):
     is_active: bool = True
     created_at: datetime
     # relationships
-    shifts -> Shift.user_id          # explicit, disambiguates two FKs
     tasks  -> Task
+    assignments -> Assignment.user_id
     notifications -> Notification
 ```
 
@@ -361,19 +366,24 @@ class Event(Base):
     created_at: datetime
 ```
 
-### Shift (`models/shift.py`)
+### Assignment (`models/assignment.py`)
 
 ```python
-class Shift(Base):
+class AssignmentStatus(str, enum.Enum):
+    planned | active | on_hold | completed
+
+class Assignment(Base):
     id: int (pk)
-    user_id: int (fk users)
-    event_id: int | None (fk events)
-    start_time: datetime
-    end_time: datetime
-    status: str = "scheduled"        # scheduled | confirmed | swapped | cancelled
-    swap_requested_by: int | None (fk users)   # second FK to users
+    user_id: int (fk users, on delete cascade)
+    task_id: int (fk tasks, on delete cascade)
+    start_date: datetime
+    end_date: datetime | None
+    allocation_pct: int = 100         # 1-100; sum >100 across active = overallocated
+    status: AssignmentStatus = planned
     created_at: datetime
 ```
+
+> `Shift` model was removed and replaced by `Assignment`.
 
 ### Project (`models/project.py`)
 
@@ -398,10 +408,15 @@ class Task(Base):
     project_id: int | None (fk projects, on delete set null)
     title: str
     notes: str | None
-    status: enum(pending, in_progress, done) = pending
+    status: enum(planned, pending, in_progress, done) = pending
     is_private: bool = False
     shared_with: str | None          # comma-separated user IDs
+    start_date: datetime | None
+    due_date: datetime | None
+    estimated_hours: int | None
     created_at: datetime
+    # relationships
+    assignments -> Assignment.task_id
 ```
 
 ### Notification (`models/notification.py`)
@@ -462,9 +477,6 @@ Standard list/create/get/update/delete. Role changes via PATCH.
 ### Events — `/api/events`
 List, create, get, update, delete. `date` is a single day.
 
-### Shifts — `/api/shifts`
-List, create, get, update, plus `POST /{id}/swap-request` and `POST /{id}/approve-swap`.
-
 ### Tasks — `/api/tasks`
 List, create, get, patch (status/title/notes), delete. Patch triggers lifecycle notification side effects (see §6).
 
@@ -483,11 +495,22 @@ List, create, get, patch (status/title/notes), delete. Patch triggers lifecycle 
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/` | any | List all projects. |
+| GET | `/` | any | List all projects (members: only projects they have a task in). |
 | POST | `/` | admin/leader | Create project. |
 | GET | `/{id}` | any | Project detail with tasks + assigned user names. |
 | PATCH | `/{id}` | admin/leader | Update name/description/status. |
 | DELETE | `/{id}` | admin only | Delete project. |
+
+### Assignments — `/api/assignments`
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/` | any | List assignments (members: own only). |
+| POST | `/` | admin/leader | Create assignment. |
+| GET | `/{id}` | any | Get assignment. |
+| PATCH | `/{id}` | admin/leader | Update assignment. |
+| DELETE | `/{id}` | admin/leader | Delete assignment. |
+| GET | `/user/{user_id}/overallocation` | any | Returns total allocation %, overallocated flag, and active assignment list. |
 
 ### Agents — `/api/agents`
 
@@ -516,7 +539,7 @@ List, create, get, patch (status/title/notes), delete. Patch triggers lifecycle 
 |---|---|
 | **admin** | Full access; can change roles, manage all data. |
 | **leader** | Sees all team tasks, receives lifecycle notifications, approves swaps. |
-| **member** | Manages own tasks, requests swaps, sees own shifts. |
+| **member** | Manages own tasks, sees own assignments, sees only projects they have a task in. |
 
 RBAC is partially enforced (e.g. `_can_view` in `tasks.py`). Hardening tracked in the backlog.
 

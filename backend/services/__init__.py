@@ -1,4 +1,4 @@
-from .shift_service import ShiftService
+from .assignment_service import AssignmentService
 from .notification_service import NotificationService
 
-__all__ = ["ShiftService", "NotificationService"]
+__all__ = ["AssignmentService", "NotificationService"]

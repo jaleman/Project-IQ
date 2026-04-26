@@ -12,6 +12,9 @@ class TaskBase(BaseModel):
     is_private: bool = False
     shared_with: Optional[str] = None
     project_id: Optional[int] = None
+    start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    estimated_hours: Optional[int] = None
 
 
 class TaskCreate(TaskBase):
@@ -25,6 +28,9 @@ class TaskUpdate(BaseModel):
     is_private: Optional[bool] = None
     shared_with: Optional[str] = None
     project_id: Optional[int] = None
+    start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    estimated_hours: Optional[int] = None
 
 
 class TaskOut(TaskBase):

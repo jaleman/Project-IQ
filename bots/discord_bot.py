@@ -1,6 +1,6 @@
 """
 Discord bot for ProjectIQ.
-Supports slash commands and natural-language scheduling requests.
+Supports slash commands and natural-language resource management requests.
 """
 
 import asyncio
@@ -41,12 +41,12 @@ async def on_ready() -> None:
     await bot.tree.sync()
 
 
-@bot.hybrid_command(name="schedule", description="View schedule or detect coverage gaps")
-async def schedule_cmd(ctx: commands.Context) -> None:
+@bot.hybrid_command(name="assignments", description="View current resource assignments")
+async def assignments_cmd(ctx: commands.Context) -> None:
     await ctx.defer()
-    result = await run_agent("detect_gaps", {}, BOT_API_TOKEN)
+    result = await run_agent("detect_overallocation", {}, BOT_API_TOKEN)
     response = result.get("data", {}).get("response", "No data available.")
-    await ctx.send(f"📅 **Schedule Analysis**\n```\n{response[:1800]}\n```")
+    await ctx.send(f"📋 **Assignment Analysis**\n```\n{response[:1800]}\n```")
 
 
 @bot.hybrid_command(name="tasks", description="List and manage tasks")
@@ -57,12 +57,12 @@ async def tasks_cmd(ctx: commands.Context) -> None:
     await ctx.send(f"✅ **Tasks**\n```\n{response[:1800]}\n```")
 
 
-@bot.hybrid_command(name="gaps", description="Check for staffing gaps")
-async def gaps_cmd(ctx: commands.Context) -> None:
+@bot.hybrid_command(name="capacity", description="Check team capacity and overallocation")
+async def capacity_cmd(ctx: commands.Context) -> None:
     await ctx.defer()
     result = await run_agent("check_coverage", {}, BOT_API_TOKEN)
-    response = result.get("data", {}).get("response", "No coverage data.")
-    await ctx.send(f"⚠️ **Coverage Check**\n```\n{response[:1800]}\n```")
+    response = result.get("data", {}).get("response", "No capacity data.")
+    await ctx.send(f"⚠️ **Capacity Check**\n```\n{response[:1800]}\n```")
 
 
 @bot.event
@@ -74,7 +74,10 @@ async def on_message(message: discord.Message) -> None:
     if bot.user and bot.user.mentioned_in(message):
         text = message.content.replace(f"<@{bot.user.id}>", "").strip()
         if text:
-            action = "detect_gaps" if "shift" in text.lower() else "check_coverage"
+            if any(w in text.lower() for w in ["assign", "overalloc", "overload"]):
+                action = "detect_overallocation"
+            else:
+                action = "check_coverage"
             result = await run_agent(action, {"query": text}, BOT_API_TOKEN)
             response = result.get("data", {}).get("response", "I couldn't process that.")
             await message.channel.send(response[:2000])
