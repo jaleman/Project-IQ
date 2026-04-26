@@ -20,6 +20,7 @@
 10. [Voice Support](#10-voice-support)
 11. [Infrastructure & Hosting](#11-infrastructure--hosting)
 12. [Roadmap](#12-roadmap)
+13. [Developer Tooling — GitHub Copilot Customizations](#13-developer-tooling--github-copilot-customizations)
 
 > Concrete next-step features and known gaps live in [PRODUCT_BACKLOG.md](./PRODUCT_BACKLOG.md). This document describes what is built today.
 
@@ -698,3 +699,69 @@ The previous embedded checklist has been moved to **[PRODUCT_BACKLOG.md](./PRODU
 ---
 
 *ProjectIQ is a proof of concept. Architecture decisions favor simplicity and iteration speed over production-grade scalability.*
+
+---
+
+## 13. Developer Tooling — GitHub Copilot Customizations
+
+ProjectIQ uses VS Code + GitHub Copilot Agent mode with a set of customization files under `.github/` to encode project-specific workflows and standards directly into the AI assistant.
+
+### 13.1 File Locations
+
+```
+.github/
+  prompts/
+    feedback-inbox.prompt.md   # Interactive feedback inbox workflow
+  instructions/                # (future) file-pattern-scoped coding standards
+  agents/                      # (future) specialized subagents
+  hooks/                       # (future) lifecycle shell commands
+```
+
+### 13.2 Prompts (`.prompt.md`)
+
+Reusable task templates invoked on-demand in Copilot Chat by typing `/prompt-name`.
+
+| Prompt | Trigger | Purpose |
+|---|---|---|
+| `feedback-inbox` | `/feedback-inbox` | Log in, fetch the feedback inbox, display all entries with reply status, send developer replies interactively — all without leaving VS Code. |
+
+**How it works:**
+1. Reads `/.projectiq-creds` (email + password, two lines, `chmod 600`) from the workspace root.
+2. POSTs to `POST /api/auth/login` on every run to get a fresh JWT — no stale token problem.
+3. Fetches `GET /api/feedback/` and formats entries as a readable list.
+4. Asks which entry to reply to and sends `PATCH /api/feedback/{id}/reply`.
+
+**Credentials file format** (`.projectiq-creds`, gitignored):
+```
+your@email.com
+yourpassword
+```
+
+Create it with:
+```bash
+printf 'your@email.com\nyourpassword\n' > .projectiq-creds && chmod 600 .projectiq-creds
+```
+
+### 13.3 Credentials & Security
+
+| File | Purpose | Gitignored |
+|---|---|---|
+| `.projectiq-creds` | Email + password for prompt auto-login | ✅ |
+| `.projectiq-token` | Legacy manual JWT store (replaced by creds) | ✅ |
+
+Both files are listed in `.gitignore`. The credentials file is created with `chmod 600` so only the owner can read it.
+
+### 13.4 Adding New Prompts
+
+Place new prompt files at `.github/prompts/<name>.prompt.md`. Minimum frontmatter:
+
+```yaml
+---
+description: "What this prompt does — shown in the /command picker"
+name: "Human Readable Name"
+agent: "agent"
+tools: ["runInTerminal", "readFile"]
+---
+```
+
+Use VS Code's actual tool IDs (`runInTerminal`, `readFile`) — not snake_case variants — or the prompt will load with no tools.

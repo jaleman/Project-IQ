@@ -104,3 +104,10 @@ export const projectsApi = {
   update: (id: number, payload: Record<string, unknown>) => api.patch(`/api/projects/${id}`, payload),
   delete: (id: number) => api.delete(`/api/projects/${id}`),
 };
+
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+export const feedbackApi = {
+  submit: (payload: { type: string; notes: string }) => api.post("/api/feedback/", payload),
+  list: () => api.get("/api/feedback/"),
+  reply: (id: number, reply: string) => api.patch(`/api/feedback/${id}/reply`, { reply }),
+};
