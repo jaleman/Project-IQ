@@ -45,6 +45,7 @@ ProjectIQ is an AI-assisted employee scheduling and task-management app for smal
 | Lifecycle Notifications (per-task status tracking, archive) | ✅ |
 | AI agents (Scheduler, Notifier, Task Manager, Availability) | ✅ direct LLM responses |
 | Web dashboard, Calendar+Projects, Team, Tasks, Notifications pages | ✅ |
+| Dark mode (Tailwind `class` strategy, `ThemeProvider`, sun/moon toggle, Settings modal) | ✅ |
 | Caddy reverse proxy + Docker Compose orchestration | ✅ |
 | Cloudflare Tunnel | ✅ live at https://www.whatiskali.dev |
 | RBAC enforcement on sensitive UI actions (Add/Delete Member, Add Project) | ✅ |
@@ -170,7 +171,10 @@ frontend/
 │   │   └── notifications/page.tsx  # Filters · per-id mark read · archive
 ├── components/
 │   ├── Sidebar.tsx
-│   └── TopBar.tsx                  # Avatar dropdown: Sign Out + Change Password
+│   ├── TopBar.tsx                  # Avatar dropdown: Sign Out + Change Password + Settings (theme)
+│   ├── ThemeProvider.tsx           # Dark-mode context: theme, toggleTheme, setTheme; persists in localStorage
+│   ├── Providers.tsx               # Wraps app: ThemeProvider + QueryClientProvider
+│   └── StatCard.tsx                # Stat card with dark-aware icon badge tints
 ├── lib/
 │   ├── api.ts                      # Axios + grouped resource APIs (incl. projectsApi)
 │   └── types.ts                    # Includes Project, ProjectDetail, ProjectTaskOut
@@ -180,6 +184,7 @@ frontend/
 Conventions:
 - Most pages use **TanStack React Query** (`useQuery` / `useMutation`).
 - Axios attaches JWT from `localStorage["projectiq_token"]` on every request.
+- Dark mode is controlled by the `dark` class on `<html>`. Preference stored in `localStorage["projectiq_theme"]` and initialised from `prefers-color-scheme` on first visit.
 - Most API responses are unwrapped via `data?.data?.data` (envelope is `{data,error,status}`).
 - RBAC: pages check `user.role` from `authApi.me()` to conditionally render admin actions.
 
