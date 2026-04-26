@@ -47,6 +47,14 @@
 | Swap-request workflow end-to-end | Member requests → leader approves → notification fires for both parties. |
 | Conflict detection | Server-side overlap check on create/update; warning chip in UI. |
 
+### Projects feature
+
+| Item | Notes |
+|---|---|
+| **Projects backend** — model, schema, CRUD router (`GET /api/projects/`, `POST`, `PATCH /{id}`, `DELETE /{id}`) | Calendar page already calls `/api/projects/` — currently 404s for all users. |
+| **Link events/tasks to a project** | Foreign key `project_id` on `events` and `tasks`; filter views by project. |
+| **Drag event → create task under a project** | Calendar UX: drag an upcoming event onto a project card to auto-create a task with no resource assigned. |
+
 ### Tasks improvements
 
 | Item | Notes |
