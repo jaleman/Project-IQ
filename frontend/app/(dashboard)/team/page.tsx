@@ -7,9 +7,9 @@ import { Trash2, UserPlus } from "lucide-react";
 import { useState } from "react";
 
 const ROLE_BADGE: Record<string, string> = {
-  admin: "bg-red-100 text-red-700",
-  leader: "bg-yellow-100 text-yellow-700",
-  member: "bg-blue-100 text-blue-700",
+  admin: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  leader: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  member: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
 };
 
 export default function TeamPage() {
@@ -56,7 +56,7 @@ export default function TeamPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Team Members</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Team Members</h1>
         {isAdmin && (
           <button
             onClick={() => setShowAdd(true)}
@@ -70,27 +70,27 @@ export default function TeamPage() {
       {isLoading ? (
         <p className="text-slate-500">Loading...</p>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 uppercase text-xs">
+            <thead className="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 uppercase text-xs">
               <tr>
                 {["Name", "Email", "Role", "Status", ""].map((h) => (
                   <th key={h} className="px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{u.email}</td>
+                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{u.name}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{u.email}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[u.role]}`}>
                       {u.role}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400"}`}>
                       {u.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
@@ -113,8 +113,8 @@ export default function TeamPage() {
 
       {showAdd && isAdmin && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Add Team Member</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Add Team Member</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -128,7 +128,7 @@ export default function TeamPage() {
                 placeholder="Name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               />
               <input
                 required
@@ -136,7 +136,7 @@ export default function TeamPage() {
                 placeholder="Email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               />
               <input
                 required
@@ -144,12 +144,12 @@ export default function TeamPage() {
                 placeholder="Temporary password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               />
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="member">Member</option>
                 <option value="leader">Leader</option>
@@ -163,7 +163,7 @@ export default function TeamPage() {
                     setShowAdd(false);
                     setFormError(null);
                   }}
-                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                 >
                   Cancel
                 </button>

@@ -54,7 +54,7 @@ export default function NotificationsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
           {showArchived ? "Archived Notifications" : "Notifications"}
         </h1>
         <button
@@ -74,7 +74,7 @@ export default function NotificationsPage() {
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
               filter === f.key
                 ? "bg-brand-600 text-white"
-                : "bg-white border border-slate-200 text-slate-600 hover:border-brand-400"
+                : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
             }`}
           >
             {f.label}
@@ -97,13 +97,13 @@ export default function NotificationsPage() {
               <div
                 key={n.id}
                 className={`flex items-center gap-4 p-4 rounded-2xl border ${
-                  n.read ? "bg-white border-slate-100" : "bg-blue-50 border-blue-100"
+                  n.read ? "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700" : "bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800"
                 }`}
               >
                 <div className="flex-1">
                   <p
                     className={`text-sm ${
-                      n.read ? "text-slate-600" : "font-semibold text-slate-800"
+                      n.read ? "text-slate-600 dark:text-slate-400" : "font-semibold text-slate-800 dark:text-slate-100"
                     }`}
                   >
                     {n.message}
