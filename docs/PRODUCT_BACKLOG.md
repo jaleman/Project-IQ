@@ -115,7 +115,7 @@
 
 | Item | When |
 |---|---|
-| **Dark mode** — Tailwind `darkMode: "class"` strategy; `ThemeProvider` context (localStorage persistence + `prefers-color-scheme` fallback); sun/moon toggle in TopBar; Settings modal with Light/Dark selector; full `dark:` coverage across all pages, modals, inputs, badges, and stat cards (PR #2) | Apr 2026 |
+| **Dark mode** — Tailwind `darkMode: "class"` strategy; `ThemeProvider` context (localStorage persistence + `prefers-color-scheme` fallback); sun/moon toggle in TopBar; Settings modal with Light/Dark selector; full `dark:` coverage across all pages, modals, inputs, badges, and stat cards ([PR #1](https://github.com/jaleman/Project-IQ/pull/1)) | Apr 2026 |
 | `cloudflared` service added to `docker-compose.yml` (behind `tunnel` profile) + `.env` placeholder + docs updated | Apr 2026 |
 | Cloudflare Tunnel live at https://www.whatiskali.dev (universal SSL, Caddy ingress) | Apr 2026 |
 | `POST /api/auth/register` locked to first-user bootstrap (forces admin); `GET /api/auth/bootstrap-status` added | Apr 2026 |
