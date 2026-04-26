@@ -4,6 +4,8 @@
 .env.*.local
 *.env
 !.env.example
+.projectiq-token
+.projectiq-creds
 
 # ─── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
