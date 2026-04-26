@@ -1,0 +1,29 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+pydantic==2.7.1
+pydantic-settings==2.2.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1           # pin: passlib 1.7.4 is incompatible with bcrypt>=4.1
+python-multipart==0.0.9
+httpx==0.27.0
+redis[hiredis]==5.0.4
+celery==5.4.0
+
+# AI / Agents
+# Loose pins so pip can resolve a mutually compatible set on the
+# current Python/arm64 platform. Newer crewai dropped the hard
+# langchain<0.2 cap and uses litellm internally, which plays well
+# with langchain/langgraph 0.2.x.
+langgraph>=0.2.0,<0.3.0
+langchain>=0.2.10,<0.3.0
+langchain-community>=0.2.10,<0.3.0
+crewai>=0.70.0,<0.90.0
+openai>=1.30.0,<2.0.0   # used as Ollama-compatible client
+
+# Utilities
+python-dotenv==1.0.1
+structlog==24.1.0

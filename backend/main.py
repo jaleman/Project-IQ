@@ -1,0 +1,63 @@
+import structlog
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+
+from config import settings
+from database import engine, Base
+from routers import auth, users, events, tasks, shifts, agents, notifications
+
+logger = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create tables (Alembic handles migrations in production)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        # Lightweight idempotent migrations for dev (Postgres)
+        await conn.execute(text(
+            "ALTER TABLE notifications "
+            "ADD COLUMN IF NOT EXISTS task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS task_status VARCHAR(20)"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
+    logger.info("ProjectIQ backend started", model=settings.ollama_model)
+    yield
+    await engine.dispose()
+    logger.info("ProjectIQ backend stopped")
+
+
+app = FastAPI(
+    title="ProjectIQ API",
+    version="0.1.0",
+    description="AI-powered employee scheduling platform",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth, prefix="/api/auth", tags=["auth"])
+app.include_router(users, prefix="/api/users", tags=["users"])
+app.include_router(events, prefix="/api/events", tags=["events"])
+app.include_router(tasks, prefix="/api/tasks", tags=["tasks"])
+app.include_router(shifts, prefix="/api/shifts", tags=["shifts"])
+app.include_router(agents, prefix="/api/agents", tags=["agents"])
+app.include_router(notifications, prefix="/api/notifications", tags=["notifications"])
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "app": settings.app_name}

@@ -1,0 +1,138 @@
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-projectiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-projectiq_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-projectiq}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-projectiq}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (FastAPI) ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-projectiq}:${POSTGRES_PASSWORD:-projectiq_pass}@postgres:5432/${POSTGRES_DB:-projectiq}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ── Frontend (Next.js) ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # keep container's node_modules, don't shadow
+      - /app/.next          # keep build cache inside container
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # ── Telegram Bot ─────────────────────────────────────────────────────────────
+  telegram-bot:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      BOT_TYPE: telegram
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ── Discord Bot ───────────────────────────────────────────────────────────────
+  discord-bot:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      BOT_TYPE: discord
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ── Caddy (reverse proxy) ─────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+  # ── Cloudflare Tunnel ─────────────────────────────────────────────────────────
+  # Exposes the local stack to the internet over an outbound-only encrypted tunnel.
+  # Requires CLOUDFLARE_TUNNEL_TOKEN in .env (created in the Cloudflare Zero Trust
+  # dashboard: Networks → Tunnels → Create a tunnel → choose Cloudflared → copy token).
+  # The "profiles" key keeps the service out of the default `up` command unless
+  # you opt in with `--profile tunnel` (or by setting COMPOSE_PROFILES=tunnel).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    env_file: .env
+    profiles: ["tunnel"]
+    depends_on:
+      - caddy
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

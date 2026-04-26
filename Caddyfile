@@ -1,0 +1,23 @@
+# Caddyfile – ProjectIQ reverse proxy
+# In production replace :80 with your domain name e.g. projectiq.example.com
+
+:80 {
+    # Route /api/* to backend
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # All other traffic goes to the Next.js frontend
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    # Compression
+    encode gzip
+
+    # Logging
+    log {
+        output stdout
+        format json
+    }
+}

@@ -1,0 +1,95 @@
+import axios from "axios";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export const api = axios.create({
+  baseURL: BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Attach JWT from localStorage on every request
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("projectiq_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
+// Helper to unwrap the {data, error, status} envelope
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const message = error.response?.data?.detail ?? error.message;
+    return Promise.reject(new Error(message));
+  }
+);
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+export const authApi = {
+  login: (email: string, password: string) => {
+    const form = new URLSearchParams({ username: email, password });
+    return api.post("/api/auth/login", form, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+  },
+  register: (payload: Record<string, unknown>) => api.post("/api/auth/register", payload),
+  me: () => api.get("/api/auth/me"),
+  logout: () => api.post("/api/auth/logout"),
+};
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+export const usersApi = {
+  list: () => api.get("/api/users/"),
+  get: (id: number) => api.get(`/api/users/${id}`),
+  create: (payload: Record<string, unknown>) => api.post("/api/users/", payload),
+  update: (id: number, payload: Record<string, unknown>) => api.patch(`/api/users/${id}`, payload),
+  delete: (id: number) => api.delete(`/api/users/${id}`),
+};
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+export const eventsApi = {
+  list: () => api.get("/api/events/"),
+  get: (id: number) => api.get(`/api/events/${id}`),
+  create: (payload: Record<string, unknown>) => api.post("/api/events/", payload),
+  update: (id: number, payload: Record<string, unknown>) =>
+    api.patch(`/api/events/${id}`, payload),
+  delete: (id: number) => api.delete(`/api/events/${id}`),
+};
+
+// ─── Tasks ───────────────────────────────────────────────────────────────────
+export const tasksApi = {
+  list: () => api.get("/api/tasks/"),
+  get: (id: number) => api.get(`/api/tasks/${id}`),
+  create: (payload: Record<string, unknown>) => api.post("/api/tasks/", payload),
+  update: (id: number, payload: Record<string, unknown>) => api.patch(`/api/tasks/${id}`, payload),
+  delete: (id: number) => api.delete(`/api/tasks/${id}`),
+};
+
+// ─── Shifts ──────────────────────────────────────────────────────────────────
+export const shiftsApi = {
+  list: () => api.get("/api/shifts/"),
+  get: (id: number) => api.get(`/api/shifts/${id}`),
+  create: (payload: Record<string, unknown>) => api.post("/api/shifts/", payload),
+  update: (id: number, payload: Record<string, unknown>) =>
+    api.patch(`/api/shifts/${id}`, payload),
+  requestSwap: (id: number, requestedBy: number) =>
+    api.post(`/api/shifts/${id}/swap-request`, { requested_by: requestedBy }),
+  approveSwap: (id: number) => api.post(`/api/shifts/${id}/approve-swap`),
+};
+
+// ─── Agents ──────────────────────────────────────────────────────────────────
+export const agentsApi = {
+  run: (action: string, payload: Record<string, unknown>) =>
+    api.post("/api/agents/run", { action, payload }),
+};
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+export const notificationsApi = {
+  list: (archived = false) => api.get(`/api/notifications/?archived=${archived}`),
+  markRead: (id: number) => api.patch(`/api/notifications/${id}/read`),
+  archive: (id: number) => api.patch(`/api/notifications/${id}/archive`),
+  unarchive: (id: number) => api.patch(`/api/notifications/${id}/unarchive`),
+};
