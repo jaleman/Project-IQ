@@ -25,6 +25,9 @@ dist/
 htmlcov/
 
 # ─── Node / Next.js ──────────────────────────────────────────────────────────
+# Root-level npm files (npm should only run inside frontend/)
+/package.json
+/package-lock.json
 node_modules/
 .next/
 .turbo/
