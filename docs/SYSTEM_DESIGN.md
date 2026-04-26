@@ -1,8 +1,8 @@
 # ProjectIQ — System Design Overview
 
-> **Status:** Proof of Concept — running locally on Mac Mini M4
+> **Status:** Proof of Concept — live at https://www.whatiskali.dev (Cloudflare Tunnel)
 > **Last Updated:** April 2026
-> **Stack:** Next.js 14 · FastAPI · LangGraph · Ollama (Gemma 4) · PostgreSQL · Redis · Caddy · Docker Compose
+> **Stack:** Next.js 20 · FastAPI · LangGraph · Ollama (Gemma 4) · PostgreSQL · Redis · Caddy · Docker Compose · Cloudflare Tunnel
 
 ---
 
@@ -40,48 +40,52 @@ ProjectIQ is an AI-assisted employee scheduling and task-management app for smal
 
 | Area | Status |
 |---|---|
-| Auth (register / login / me, JWT) | ✅ |
-| Users, Events, Shifts, Tasks CRUD | ✅ |
+| Auth (JWT, bootstrap-only register, change-password) | ✅ |
+| Users, Events, Shifts, Tasks, Projects CRUD | ✅ |
 | Lifecycle Notifications (per-task status tracking, archive) | ✅ |
 | AI agents (Scheduler, Notifier, Task Manager, Availability) | ✅ direct LLM responses |
-| Web dashboard, Calendar, Team, Tasks, Notifications pages | ✅ |
+| Web dashboard, Calendar+Projects, Team, Tasks, Notifications pages | ✅ |
 | Caddy reverse proxy + Docker Compose orchestration | ✅ |
+| Cloudflare Tunnel | ✅ live at https://www.whatiskali.dev |
+| RBAC enforcement on sensitive UI actions (Add/Delete Member, Add Project) | ✅ |
+| TopBar avatar dropdown (Sign Out, Change Password) | ✅ |
+| FastAPI Swagger/ReDoc gated behind `DEBUG=true` | ✅ |
 | Telegram + Discord bot containers | ✅ scaffolded, idle without tokens |
 | Voice service (Whisper) | ⏸ folder exists, not in `docker-compose.yml` |
-| Cloudflare Tunnel | ✅ wired in `docker-compose.yml` (behind the `tunnel` profile); needs a token in `.env` |
 
 ---
 
 ## 2. Architecture Overview
 
 ```
-                        ┌─────────────────────────────┐
-                        │         Clients              │
-                        │  Browser · Mobile · Bot      │
-                        └────────────┬────────────────┘
-                                     │ HTTP(S)
-                        ┌────────────▼────────────────┐
-                        │    Caddy Reverse Proxy       │
-                        │    Port 80 · Routing         │
-                        └────────────┬────────────────┘
-                    ┌────────────────┼─────────────────┐
-                    │                │                  │
-         ┌──────────▼──┐   ┌────────▼──────┐  ┌───────▼──────┐
-         │  Next.js 14  │   │   FastAPI     │  │  Bot Workers │
-         │  Frontend    │   │   Backend     │  │  Telegram /  │
-         │  Port 3000   │   │   Port 8000   │  │  Discord     │
-         └─────────────┘   └────────┬──────┘  └──────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    │               │               │
-         ┌──────────▼──┐  ┌────────▼──┐  ┌────────▼──────────┐
-         │ PostgreSQL   │  │   Redis   │  │ Ollama (host)      │
-         │ Port 5432    │  │ Port 6379 │  │ host.docker.internal│
-         │              │  │           │  │ Port 11434          │
-         └─────────────┘  └───────────┘  └────────────────────┘
-                                              │
-                                              ▼
-                                          Gemma 4 (Metal GPU)
+Internet User
+    │ HTTPS
+    ▼
+Cloudflare Edge  ──  Universal SSL  ──  DDoS / WAF
+    │ Cloudflare Tunnel (outbound only)
+    ▼
+Mac Mini M4
+  ├── cloudflared            (docker compose --profile tunnel)
+  │       │ proxies to caddy:80
+  │       ▼
+  ├── docker compose
+  │     ├── caddy        :80   reverse proxy
+  │     ├── frontend     :3000 Next.js 20 dev server
+  │     ├── backend      :8000 FastAPI uvicorn --reload
+  │     ├── postgres     :5432
+  │     ├── redis        :6379
+  │     ├── telegram-bot       idle without token
+  │     └── discord-bot        idle without token
+  └── native macOS
+        └── Ollama        :11434  Gemma 4 on Metal GPU
+```
+
+### Internal routing
+
+```
+caddy:80
+  /api/*  →  backend:8000
+  *       →  frontend:3000
 ```
 
 ### Request Flow
@@ -102,7 +106,7 @@ ProjectIQ is an AI-assisted employee scheduling and task-management app for smal
 
 | Technology | Purpose | Version |
 |---|---|---|
-| Next.js (App Router) | React framework | 14.2 |
+| Next.js (App Router) | React framework | 20 |
 | React | UI library | 18 |
 | TypeScript | Type safety | 5 |
 | Tailwind CSS | Utility-first styling | 3 |
@@ -155,20 +159,21 @@ ProjectIQ is an AI-assisted employee scheduling and task-management app for smal
 frontend/
 ├── app/
 │   ├── layout.tsx                  # Root layout + React Query provider
+│   ├── page.tsx                    # Landing — Sign In only (Get Started removed)
 │   ├── login/page.tsx              # OAuth2-style login form
 │   ├── (dashboard)/
 │   │   ├── layout.tsx              # Sidebar + TopBar shell
 │   │   ├── dashboard/page.tsx      # Stat cards + AI quick actions
-│   │   ├── calendar/page.tsx       # Upcoming events + shifts list
-│   │   ├── team/page.tsx           # Team member list
+│   │   ├── calendar/page.tsx       # Upcoming events + Projects accordion
+│   │   ├── team/page.tsx           # Team member list (Add/Delete admin-gated)
 │   │   ├── tasks/page.tsx          # Task list, modal create, status cycling
 │   │   └── notifications/page.tsx  # Filters · per-id mark read · archive
 ├── components/
 │   ├── Sidebar.tsx
-│   └── TopBar.tsx                  # Bell removed (commented-out for revival)
+│   └── TopBar.tsx                  # Avatar dropdown: Sign Out + Change Password
 ├── lib/
-│   ├── api.ts                      # Axios + grouped resource APIs
-│   └── types.ts
+│   ├── api.ts                      # Axios + grouped resource APIs (incl. projectsApi)
+│   └── types.ts                    # Includes Project, ProjectDetail, ProjectTaskOut
 └── ...config files
 ```
 
@@ -176,6 +181,7 @@ Conventions:
 - Most pages use **TanStack React Query** (`useQuery` / `useMutation`).
 - Axios attaches JWT from `localStorage["projectiq_token"]` on every request.
 - Most API responses are unwrapped via `data?.data?.data` (envelope is `{data,error,status}`).
+- RBAC: pages check `user.role` from `authApi.me()` to conditionally render admin actions.
 
 ### 4.2 Backend (`backend/`)
 
@@ -185,12 +191,13 @@ backend/
 ├── config.py              # Pydantic Settings
 ├── database.py            # Async engine + session
 ├── routers/
-│   ├── auth.py            # /api/auth/{register,login,me} — login is OAuth2-shaped
+│   ├── auth.py            # register (bootstrap-only), login, me, change-password, logout
 │   ├── users.py
 │   ├── events.py
 │   ├── shifts.py          # CRUD + swap request / approve
 │   ├── tasks.py           # CRUD + lifecycle notification side-effects
 │   ├── notifications.py   # list (active|archived) · markRead · archive · unarchive
+│   ├── projects.py        # CRUD; detail endpoint joins tasks + user names
 │   ├── agents.py          # POST /api/agents/run → LangGraph
 │   ├── deps.py            # get_current_user
 │   └── utils.py           # ok() / err() envelope helpers
@@ -201,7 +208,7 @@ backend/
 │   ├── notifier_agent.py
 │   ├── task_agent.py
 │   └── availability_agent.py
-├── models/                # SQLAlchemy models (User, Event, Shift, Task, Notification)
+├── models/                # SQLAlchemy models (User, Event, Shift, Task, Notification, Project)
 ├── schemas/               # Pydantic request/response schemas
 ├── services/              # (placeholder for future business-logic extractions)
 ├── alembic/               # Migration skeleton (currently using create_all + ALTER IF NOT EXISTS)
@@ -213,7 +220,10 @@ backend/
 PostgreSQL 16 (Docker, named volume `pgdata`). The lifespan handler runs:
 
 1. `Base.metadata.create_all` for new tables, then
-2. Idempotent `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS …` migrations to add `task_id`, `task_status`, and `archived` to existing installs.
+2. Idempotent `ALTER TABLE` migrations (all `ADD COLUMN IF NOT EXISTS`):
+   - `notifications.task_id`, `notifications.task_status`, `notifications.archived`
+   - `projects` table (created if not exists)
+   - `tasks.project_id` FK → `projects.id`
 
 This is a temporary shortcut. Alembic is scaffolded and will replace this before any non-dev deployment.
 
@@ -359,12 +369,27 @@ class Shift(Base):
     created_at: datetime
 ```
 
+### Project (`models/project.py`)
+
+```python
+class Project(Base):
+    id: int (pk)
+    name: str
+    description: str | None
+    status: enum(active, on_hold, completed) = active
+    created_by: int (fk users)
+    created_at: datetime
+    # relationship
+    tasks -> Task.project
+```
+
 ### Task (`models/task.py`)
 
 ```python
 class Task(Base):
     id: int (pk)
     user_id: int (fk users)          # owner
+    project_id: int | None (fk projects, on delete set null)
     title: str
     notes: str | None
     status: enum(pending, in_progress, done) = pending
@@ -418,9 +443,12 @@ The single exception is **`POST /api/auth/login`**, which returns the OAuth2-sta
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/register` | Public; creates a `member`. First user can be promoted via DB. |
-| POST | `/login` | Form-encoded (OAuth2PasswordRequestForm). Unwrapped response. |
+| GET | `/bootstrap-status` | Public. Returns `{needs_bootstrap: true/false}`. |
+| POST | `/register` | Public **only when zero users exist**. First account forced to `admin`. |
+| POST | `/login` | Form-encoded (OAuth2PasswordRequestForm). Unwrapped OAuth2 response. |
 | GET | `/me` | Requires JWT. |
+| POST | `/change-password` | Requires JWT + current password. Min 8-char new password. |
+| POST | `/logout` | No-op (JWT is stateless); client discards token. |
 
 ### Users — `/api/users`
 Standard list/create/get/update/delete. Role changes via PATCH.
@@ -445,6 +473,16 @@ List, create, get, patch (status/title/notes), delete. Patch triggers lifecycle 
 
 (There is intentionally **no** `mark-all-read`.)
 
+### Projects — `/api/projects`
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/` | any | List all projects. |
+| POST | `/` | admin/leader | Create project. |
+| GET | `/{id}` | any | Project detail with tasks + assigned user names. |
+| PATCH | `/{id}` | admin/leader | Update name/description/status. |
+| DELETE | `/{id}` | admin only | Delete project. |
+
 ### Agents — `/api/agents`
 
 | Method | Path | Notes |
@@ -460,9 +498,11 @@ List, create, get, patch (status/title/notes), delete. Patch triggers lifecycle 
 ## 8. Authentication & Permissions
 
 - JWT (HS256, `JWT_SECRET_KEY` from `.env`).
-- 24-hour expiry by default.
-- Token currently stored in **`localStorage["projectiq_token"]`** — to be migrated to httpOnly cookie before any non-POC deployment.
+- 60-minute expiry.
+- Token stored in **`localStorage["projectiq_token"]`** — to be migrated to httpOnly cookie before any non-POC deployment.
 - Axios attaches `Authorization: Bearer <token>` to every request.
+- FastAPI `/docs`, `/redoc`, `/openapi.json` only served when `DEBUG=true`.
+- `/api/auth/register` is a bootstrap-only endpoint — disabled once the first user exists.
 
 ### Roles
 
@@ -513,13 +553,16 @@ The whole stack runs via `docker compose up -d` on the Mac Mini M4 (16 GB), with
 
 ```
 Remote user
-    │ (eventually) Cloudflare Tunnel
+    │ HTTPS → www.whatiskali.dev
+    ▼
+Cloudflare Edge  (Universal SSL, DDoS protection)
+    │ Cloudflare Tunnel (outbound-only, no open inbound ports)
     ▼
 Mac Mini M4
-  ├── cloudflared      (planned — not yet wired)
+  ├── cloudflared      (docker compose --profile tunnel)
   ├── docker compose
   │     ├── caddy        :80   reverse proxy
-  │     ├── frontend     :3000 Next.js dev server (with ./frontend mounted)
+  │     ├── frontend     :3000 Next.js 20 dev server
   │     ├── backend      :8000 FastAPI uvicorn --reload
   │     ├── postgres     :5432
   │     ├── redis        :6379
@@ -531,8 +574,10 @@ Mac Mini M4
 
 ### 11.2 Caddyfile
 
+Uses a shared snippet `(app)` applied to both the named host (`www.whatiskali.dev`, `whatiskali.dev`) and the fallback `:80` block:
+
 ```caddy
-:80 {
+(app) {
     handle /api/* {
         reverse_proxy backend:8000
     }
@@ -542,6 +587,10 @@ Mac Mini M4
     encode gzip
     log { output stdout format json }
 }
+
+http://www.whatiskali.dev { import app }
+http://whatiskali.dev     { import app }
+:80                        { import app }
 ```
 
 ### 11.3 Frontend volume mount (lessons learned)
@@ -565,7 +614,7 @@ REDIS_URL=redis://redis:6379
 # Auth
 JWT_SECRET_KEY=<generated>
 JWT_ALGORITHM=HS256
-JWT_EXPIRE_MINUTES=1440
+JWT_EXPIRE_MINUTES=60
 
 # Ollama
 OLLAMA_BASE_URL=http://host.docker.internal:11434
@@ -577,7 +626,11 @@ DISCORD_BOT_TOKEN=
 
 # App
 APP_ENV=development
-NEXT_PUBLIC_API_URL=http://localhost:8000
+DEBUG=true                         # enables /docs, /redoc, /openapi.json
+NEXT_PUBLIC_API_URL=https://www.whatiskali.dev
+
+# Cloudflare Tunnel (only needed with --profile tunnel)
+CLOUDFLARE_TUNNEL_TOKEN=<jwt from Zero Trust dashboard>
 ```
 
 ### 11.5 Startup sequence

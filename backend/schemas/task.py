@@ -11,6 +11,7 @@ class TaskBase(BaseModel):
     notes: Optional[str] = None
     is_private: bool = False
     shared_with: Optional[str] = None
+    project_id: Optional[int] = None
 
 
 class TaskCreate(TaskBase):
@@ -23,6 +24,7 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     is_private: Optional[bool] = None
     shared_with: Optional[str] = None
+    project_id: Optional[int] = None
 
 
 class TaskOut(TaskBase):

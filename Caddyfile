@@ -1,7 +1,8 @@
 # Caddyfile – ProjectIQ reverse proxy
-# In production replace :80 with your domain name e.g. projectiq.example.com
+# Cloudflare Tunnel terminates TLS and forwards plain HTTP to caddy:80,
+# so we listen on :80 and match by Host header.
 
-:80 {
+(app) {
     # Route /api/* to backend
     handle /api/* {
         reverse_proxy backend:8000
@@ -20,4 +21,13 @@
         output stdout
         format json
     }
+}
+
+http://www.whatiskali.dev, http://whatiskali.dev {
+    import app
+}
+
+# Local dev fallback (e.g. http://localhost)
+:80 {
+    import app
 }

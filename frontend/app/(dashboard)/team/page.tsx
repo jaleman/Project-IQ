@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi } from "@/lib/api";
-import type { User } from "@/lib/types";
+import { authApi, usersApi } from "@/lib/api";
+import type { User, UserRole } from "@/lib/types";
 import { Trash2, UserPlus } from "lucide-react";
 import { useState } from "react";
 
@@ -14,6 +14,14 @@ const ROLE_BADGE: Record<string, string> = {
 
 export default function TeamPage() {
   const qc = useQueryClient();
+
+  const { data: meRes } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => authApi.me(),
+    retry: false,
+  });
+  const isAdmin = (meRes?.data?.data as User | undefined)?.role === "admin";
+
   const { data, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: () => usersApi.list(),
@@ -25,13 +33,38 @@ export default function TeamPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "member" as UserRole,
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: (payload: typeof form) => usersApi.create(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      setShowAdd(false);
+      setForm({ name: "", email: "", password: "", role: "member" });
+      setFormError(null);
+    },
+    onError: (e: Error) => setFormError(e.message),
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Team Members</h1>
-        <button className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition">
-          <UserPlus size={16} /> Add Member
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
+          >
+            <UserPlus size={16} /> Add Member
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -62,17 +95,88 @@ export default function TeamPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => deleteMutation.mutate(u.id)}
-                      className="text-slate-400 hover:text-red-500 transition"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => deleteMutation.mutate(u.id)}
+                        className="text-slate-400 hover:text-red-500 transition"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showAdd && isAdmin && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">Add Team Member</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setFormError(null);
+                createMutation.mutate(form);
+              }}
+              className="space-y-3"
+            >
+              <input
+                required
+                placeholder="Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <input
+                required
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <input
+                required
+                type="password"
+                placeholder="Temporary password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="member">Member</option>
+                <option value="leader">Leader</option>
+                <option value="admin">Admin</option>
+              </select>
+              {formError && <p className="text-sm text-red-600">{formError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdd(false);
+                    setFormError(null);
+                  }}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {createMutation.isPending ? "Creating..." : "Create"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

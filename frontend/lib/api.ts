@@ -38,6 +38,8 @@ export const authApi = {
   register: (payload: Record<string, unknown>) => api.post("/api/auth/register", payload),
   me: () => api.get("/api/auth/me"),
   logout: () => api.post("/api/auth/logout"),
+  changePassword: (current_password: string, new_password: string) =>
+    api.post("/api/auth/change-password", { current_password, new_password }),
 };
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -92,4 +94,13 @@ export const notificationsApi = {
   markRead: (id: number) => api.patch(`/api/notifications/${id}/read`),
   archive: (id: number) => api.patch(`/api/notifications/${id}/archive`),
   unarchive: (id: number) => api.patch(`/api/notifications/${id}/unarchive`),
+};
+
+// ─── Projects ────────────────────────────────────────────────────────────────
+export const projectsApi = {
+  list: () => api.get("/api/projects/"),
+  get: (id: number) => api.get(`/api/projects/${id}`),
+  create: (payload: Record<string, unknown>) => api.post("/api/projects/", payload),
+  update: (id: number, payload: Record<string, unknown>) => api.patch(`/api/projects/${id}`, payload),
+  delete: (id: number) => api.delete(`/api/projects/${id}`),
 };

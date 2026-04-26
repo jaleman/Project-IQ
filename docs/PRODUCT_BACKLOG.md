@@ -12,7 +12,7 @@
 
 | # | Item | Notes | Status |
 |---|---|---|---|
-| 1 | **Cloudflare Tunnel** — set `CLOUDFLARE_TUNNEL_TOKEN` in `.env` and bring the stack up with `docker compose --profile tunnel up -d`. Verify the public hostname loads the dashboard. | Container is wired in `docker-compose.yml` behind the `tunnel` profile. Routing in Cloudflare dashboard → `http://caddy:80`. | 🟡 |
+| 1 | **Cloudflare Tunnel** — set `CLOUDFLARE_TUNNEL_TOKEN` in `.env` and bring the stack up with `docker compose --profile tunnel up -d`. Verify the public hostname loads the dashboard. | Live at https://www.whatiskali.dev via tunnel `project-prod` → `http://caddy:80`. Universal SSL active. | ✅ |
 | 2 | **Cleanup** — remove `crewai` from `backend/requirements.txt` (no longer used after switch to direct LLM calls); delete any stale `*.py.new` files. | Slims the image significantly. | ⏸ |
 | 3 | **Avatar uses real initial** — pull `name` from `/api/auth/me` and replace the hard-coded `U` in `TopBar`. | Trivial UI fix. | ⏸ |
 
@@ -86,7 +86,7 @@
 
 | Theme | Items |
 |---|---|
-| **Auth** | First-user bootstrap UX (skip `/register` after one admin exists); password reset; SSO via Cloudflare Access. |
+| **Auth** | Server-side JWT revocation (Redis blacklist) so `POST /api/auth/logout` actually invalidates the token instead of being a no-op (currently logout is client-side only — token remains valid until its 60-min expiry). Password reset; SSO via Cloudflare Access. |
 | **RBAC** | Centralize the role checks (currently scattered); add an audit log of every change. |
 | **Observability** | Sentry / Glitchtip; lightweight `/metrics`; `/api/admin/logs` viewer. |
 | **Tests** | Pytest suite (auth, tasks lifecycle, notification transitions, archive). Playwright smoke test (login → create task → cycle → see notification → archive). |
@@ -116,6 +116,11 @@
 | Item | When |
 |---|---|
 | `cloudflared` service added to `docker-compose.yml` (behind `tunnel` profile) + `.env` placeholder + docs updated | Apr 2026 |
+| Cloudflare Tunnel live at https://www.whatiskali.dev (universal SSL, Caddy ingress) | Apr 2026 |
+| `POST /api/auth/register` locked to first-user bootstrap (forces admin); `GET /api/auth/bootstrap-status` added | Apr 2026 |
+| TopBar avatar dropdown with **Sign out** (clears JWT + React Query cache, redirects to `/login`) | Apr 2026 |
+| Landing page **Get Started** button removed — only **Sign In** remains | Apr 2026 |
+| FastAPI `/docs`, `/redoc`, `/openapi.json` gated behind `DEBUG=true` | Apr 2026 |
 | Lifecycle notifications: per-task active card that updates in place; reopen creates new lifecycle | Apr 2026 |
 | Filters (All / Pending / In Progress / Completed) on Notifications page | Apr 2026 |
 | Per-id **Mark read** (gated to `done` tasks) — replaced "Mark all read" | Apr 2026 |

@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from config import settings
 from database import engine, Base
-from routers import auth, users, events, tasks, shifts, agents, notifications
+from routers import auth, users, events, tasks, shifts, agents, notifications, projects
 
 logger = structlog.get_logger()
 
@@ -28,6 +28,21 @@ async def lifespan(app: FastAPI):
         await conn.execute(text(
             "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE"
         ))
+        # Projects
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS projects (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                status VARCHAR(20) NOT NULL DEFAULT 'active',
+                created_by INTEGER REFERENCES users(id),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """))
+        await conn.execute(text(
+            "ALTER TABLE tasks "
+            "ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL"
+        ))
     logger.info("ProjectIQ backend started", model=settings.ollama_model)
     yield
     await engine.dispose()
@@ -39,6 +54,9 @@ app = FastAPI(
     version="0.1.0",
     description="AI-powered employee scheduling platform",
     lifespan=lifespan,
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
 )
 
 app.add_middleware(
@@ -56,6 +74,7 @@ app.include_router(tasks, prefix="/api/tasks", tags=["tasks"])
 app.include_router(shifts, prefix="/api/shifts", tags=["shifts"])
 app.include_router(agents, prefix="/api/agents", tags=["agents"])
 app.include_router(notifications, prefix="/api/notifications", tags=["notifications"])
+app.include_router(projects, prefix="/api/projects", tags=["projects"])
 
 
 @app.get("/health")

@@ -1,5 +1,6 @@
 export type UserRole = "admin" | "leader" | "member";
 export type TaskStatus = "pending" | "in_progress" | "done";
+export type ProjectStatus = "active" | "on_hold" | "completed";
 
 export interface User {
   id: number;
@@ -32,6 +33,7 @@ export interface Shift {
 export interface Task {
   id: number;
   user_id: number;
+  project_id: number | null;
   title: string;
   notes: string | null;
   status: TaskStatus;
@@ -56,4 +58,26 @@ export interface ApiResponse<T> {
   data: T;
   error: string | null;
   status: number;
+}
+
+export interface ProjectTaskOut {
+  id: number;
+  title: string;
+  notes: string | null;
+  status: TaskStatus;
+  user_id: number;
+  user_name: string;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  created_by: number;
+  created_at: string;
+}
+
+export interface ProjectDetail extends Project {
+  tasks: ProjectTaskOut[];
 }

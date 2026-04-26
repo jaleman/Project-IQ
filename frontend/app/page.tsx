@@ -10,14 +10,8 @@ export default function Home() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link
-            href="/dashboard"
-            className="bg-white text-brand-700 font-semibold px-8 py-3 rounded-xl hover:bg-blue-50 transition"
-          >
-            Get Started
-          </Link>
-          <Link
             href="/login"
-            className="border border-white text-white font-semibold px-8 py-3 rounded-xl hover:bg-white/10 transition"
+            className="bg-white text-brand-700 font-semibold px-8 py-3 rounded-xl hover:bg-blue-50 transition"
           >
             Sign In
           </Link>
