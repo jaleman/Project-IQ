@@ -26,11 +26,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    shifts: Mapped[list["Shift"]] = relationship(
-        "Shift",
-        back_populates="user",
-        foreign_keys="Shift.user_id",
-        lazy="selectin",
+    assignments: Mapped[list["Assignment"]] = relationship(
+        "Assignment", back_populates="user", lazy="selectin"
     )
     tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user", lazy="selectin")
     notifications: Mapped[list["Notification"]] = relationship(
