@@ -8,15 +8,15 @@ import { format } from "date-fns";
 import { CalendarPlus, FolderPlus, ChevronDown, ChevronRight } from "lucide-react";
 
 const STATUS_BADGE: Record<ProjectStatus, string> = {
-  active: "bg-green-100 text-green-700",
-  on_hold: "bg-yellow-100 text-yellow-700",
-  completed: "bg-slate-100 text-slate-500",
+  active: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  on_hold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  completed: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
 };
 
 const TASK_STATUS_BADGE: Record<string, string> = {
-  pending: "bg-orange-100 text-orange-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  done: "bg-green-100 text-green-700",
+  pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
 };
 
 export default function CalendarPage() {
@@ -47,6 +47,27 @@ export default function CalendarPage() {
   const [form, setForm] = useState({ name: "", description: "", status: "active" as ProjectStatus });
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Add event modal
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [eventForm, setEventForm] = useState({ title: "", date: "", required_staff: 1 });
+  const [eventFormError, setEventFormError] = useState<string | null>(null);
+
+  const createEventMutation = useMutation({
+    mutationFn: () =>
+      eventsApi.create({
+        title: eventForm.title,
+        date: new Date(eventForm.date).toISOString(),
+        required_staff: eventForm.required_staff,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["events"] });
+      setShowAddEvent(false);
+      setEventForm({ title: "", date: "", required_staff: 1 });
+      setEventFormError(null);
+    },
+    onError: (e: Error) => setEventFormError(e.message),
+  });
+
   const createMutation = useMutation({
     mutationFn: () => projectsApi.create({ ...form, description: form.description || null }),
     onSuccess: () => {
@@ -61,23 +82,30 @@ export default function CalendarPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Calendar & Projects</h1>
-        <button className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition">
-          <CalendarPlus size={16} /> New Event
-        </button>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Calendar & Projects</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Events */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-          <h2 className="font-semibold text-slate-700 mb-4">Upcoming Events</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-slate-700 dark:text-slate-200">Upcoming Events</h2>
+            {isAdminOrLeader && (
+              <button
+                onClick={() => setShowAddEvent(true)}
+                className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 font-medium"
+              >
+                <CalendarPlus size={14} /> New
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
-            {events.length === 0 && <p className="text-slate-400 text-sm">No events scheduled.</p>}
+            {events.length === 0 && <p className="text-slate-400 dark:text-slate-500 text-sm">No events scheduled.</p>}
             {events.map((e) => (
-              <div key={e.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+              <div key={e.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
                 <div>
-                  <p className="font-medium text-slate-800">{e.title}</p>
-                  <p className="text-xs text-slate-500">{format(new Date(e.date), "PPP")}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{e.title}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{format(new Date(e.date), "PPP")}</p>
                 </div>
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
                   {e.required_staff} staff
@@ -88,9 +116,9 @@ export default function CalendarPage() {
         </div>
 
         {/* Projects */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-700">Projects</h2>
+            <h2 className="font-semibold text-slate-700 dark:text-slate-200">Projects</h2>
             {isAdminOrLeader && (
               <button
                 onClick={() => setShowAdd(true)}
@@ -101,18 +129,18 @@ export default function CalendarPage() {
             )}
           </div>
           <div className="space-y-2">
-            {projects.length === 0 && <p className="text-slate-400 text-sm">No projects yet.</p>}
+            {projects.length === 0 && <p className="text-slate-400 dark:text-slate-500 text-sm">No projects yet.</p>}
             {projects.map((p) => (
-              <div key={p.id} className="border border-slate-100 rounded-xl overflow-hidden">
+              <div key={p.id} className="border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
                 {/* Project row */}
                 <button
                   type="button"
                   onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition text-left"
                 >
                   <div className="flex items-center gap-2">
                     {expandedId === p.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    <span className="font-medium text-slate-800 text-sm">{p.name}</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-100 text-sm">{p.name}</span>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[p.status]}`}>
                     {p.status.replace("_", " ")}
@@ -121,14 +149,14 @@ export default function CalendarPage() {
 
                 {/* Expanded task list */}
                 {expandedId === p.id && (
-                  <div className="border-t border-slate-100 px-4 py-3 bg-slate-50">
+                  <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 bg-slate-50 dark:bg-slate-700">
                     {p.description && (
-                      <p className="text-xs text-slate-500 mb-3">{p.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{p.description}</p>
                     )}
                     {!detail || detail.id !== p.id ? (
-                      <p className="text-xs text-slate-400">Loading tasks…</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Loading tasks…</p>
                     ) : detail.tasks.length === 0 ? (
-                      <p className="text-xs text-slate-400">No tasks assigned to this project yet.</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">No tasks assigned to this project yet.</p>
                     ) : (
                       <table className="w-full text-xs">
                         <thead>
@@ -141,8 +169,8 @@ export default function CalendarPage() {
                         <tbody className="divide-y divide-slate-100">
                           {detail.tasks.map((t) => (
                             <tr key={t.id}>
-                              <td className="py-1.5 pr-3 font-medium text-slate-700">{t.title}</td>
-                              <td className="py-1.5 pr-3 text-slate-500">{t.user_name}</td>
+                            <td className="py-1.5 pr-3 font-medium text-slate-700 dark:text-slate-200">{t.title}</td>
+                            <td className="py-1.5 pr-3 text-slate-500 dark:text-slate-400">{t.user_name}</td>
                               <td className="py-1.5">
                                 <span className={`px-1.5 py-0.5 rounded-full font-medium ${TASK_STATUS_BADGE[t.status]}`}>
                                   {t.status.replace("_", " ")}
@@ -161,11 +189,70 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      {/* Add Event Modal */}
+      {showAddEvent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">New Event</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setEventFormError(null);
+                createEventMutation.mutate();
+              }}
+              className="space-y-3"
+            >
+              <input
+                required
+                placeholder="Event title"
+                value={eventForm.title}
+                onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              />
+              <input
+                required
+                type="date"
+                value={eventForm.date}
+                onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              />
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-300 whitespace-nowrap">Staff required</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={eventForm.required_staff}
+                  onChange={(e) => setEventForm({ ...eventForm, required_staff: Number(e.target.value) })}
+                  className="w-24 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              {eventFormError && <p className="text-sm text-red-600">{eventFormError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddEvent(false); setEventFormError(null); }}
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createEventMutation.isPending}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {createEventMutation.isPending ? "Creating…" : "Create"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add Project Modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">New Project</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">New Project</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -179,19 +266,19 @@ export default function CalendarPage() {
                 placeholder="Project name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               />
               <textarea
                 placeholder="Description (optional)"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={3}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm resize-none"
               />
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="active">Active</option>
                 <option value="on_hold">On Hold</option>
@@ -202,7 +289,7 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => { setShowAdd(false); setFormError(null); }}
-                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+                  className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                 >
                   Cancel
                 </button>

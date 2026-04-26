@@ -16,7 +16,7 @@ const NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="w-60 bg-brand-900 text-white flex flex-col">
+    <aside className="w-60 bg-brand-900 dark:bg-slate-950 text-white flex flex-col">
       <div className="px-5 py-6 border-b border-white/10">
         <span className="text-2xl font-bold tracking-tight">ProjectIQ</span>
       </div>

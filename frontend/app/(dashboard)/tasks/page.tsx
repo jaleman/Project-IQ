@@ -8,9 +8,9 @@ import { Plus, Lock, Share2, X } from "lucide-react";
 import { format } from "date-fns";
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
-  pending: "bg-slate-100 text-slate-600",
-  in_progress: "bg-yellow-100 text-yellow-700",
-  done: "bg-green-100 text-green-700",
+  pending: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+  in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
 };
 
 const STATUS_NEXT: Record<TaskStatus, TaskStatus> = {
@@ -65,7 +65,7 @@ export default function TasksPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Tasks</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tasks</h1>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
@@ -82,16 +82,16 @@ export default function TasksPage() {
           {tasks.map((t) => (
             <div
               key={t.id}
-              className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100"
+              className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700"
             >
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-slate-800">{t.title}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{t.title}</p>
                   {t.is_private && <Lock size={14} className="text-slate-400" />}
                   {t.shared_with && <Share2 size={14} className="text-blue-400" />}
                 </div>
-                {t.notes && <p className="text-xs text-slate-500 mt-0.5">{t.notes}</p>}
-                <p className="text-xs text-slate-400 mt-1">{format(new Date(t.created_at), "PP")}</p>
+                {t.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t.notes}</p>}
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{format(new Date(t.created_at), "PP")}</p>
               </div>
               <button
                 onClick={() =>
@@ -116,10 +116,10 @@ export default function TasksPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <form
             onSubmit={handleSubmit}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-800">New Task</h2>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">New Task</h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
@@ -130,29 +130,29 @@ export default function TasksPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Title</label>
               <input
                 autoFocus
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="e.g. Restock supplies"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Notes</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="Optional details"
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input
                 type="checkbox"
                 checked={isPrivate}
@@ -166,7 +166,7 @@ export default function TasksPage() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+                className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
               >
                 Cancel
               </button>
