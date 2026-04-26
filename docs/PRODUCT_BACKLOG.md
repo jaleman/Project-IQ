@@ -12,9 +12,7 @@
 
 | # | Item | Notes | Status |
 |---|---|---|---|
-| 1 | **Cloudflare Tunnel** — set `CLOUDFLARE_TUNNEL_TOKEN` in `.env` and bring the stack up with `docker compose --profile tunnel up -d`. Verify the public hostname loads the dashboard. | Live at https://www.whatiskali.dev via tunnel `project-prod` → `http://caddy:80`. Universal SSL active. | ✅ |
-| 2 | **Cleanup** — remove `crewai` from `backend/requirements.txt` (no longer used after switch to direct LLM calls); delete any stale `*.py.new` files. | Slims the image significantly. | ⏸ |
-| 3 | **Avatar uses real initial** — pull `name` from `/api/auth/me` and replace the hard-coded `U` in `TopBar`. | Trivial UI fix. | ⏸ |
+| — | *(no active items — see Next for upcoming work)* | | |
 
 ---
 
@@ -123,6 +121,8 @@
 
 | Item | When |
 |---|---|
+| **Cleanup** — removed `crewai` from `backend/requirements.txt`; switched all agents to direct Ollama calls. | Apr 2026 |
+| **Avatar real initial** — `TopBar` derives initial from `user.name` via `/api/auth/me`. | Apr 2026 |
 | **Dark mode** — Tailwind `darkMode: "class"` strategy; `ThemeProvider` context (localStorage persistence + `prefers-color-scheme` fallback); sun/moon toggle in TopBar; Settings modal with Light/Dark selector; full `dark:` coverage across all pages, modals, inputs, badges, and stat cards ([PR #1](https://github.com/jaleman/Project-IQ/pull/1)) | Apr 2026 |
 | `cloudflared` service added to `docker-compose.yml` (behind `tunnel` profile) + `.env` placeholder + docs updated | Apr 2026 |
 | Cloudflare Tunnel live at https://www.whatiskali.dev (universal SSL, Caddy ingress) | Apr 2026 |

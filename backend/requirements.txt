@@ -14,14 +14,9 @@ redis[hiredis]==5.0.4
 celery==5.4.0
 
 # AI / Agents
-# Loose pins so pip can resolve a mutually compatible set on the
-# current Python/arm64 platform. Newer crewai dropped the hard
-# langchain<0.2 cap and uses litellm internally, which plays well
-# with langchain/langgraph 0.2.x.
 langgraph>=0.2.0,<0.3.0
 langchain>=0.2.10,<0.3.0
 langchain-community>=0.2.10,<0.3.0
-crewai>=0.70.0,<0.90.0
 openai>=1.30.0,<2.0.0   # used as Ollama-compatible client
 
 # Utilities
