@@ -1,6 +1,7 @@
 export type UserRole = "admin" | "leader" | "member";
 export type TaskStatus = "pending" | "in_progress" | "done";
 export type ProjectStatus = "active" | "on_hold" | "completed";
+export type FeedbackType = "bug_report" | "feature_request" | "comment" | "other";
 
 export interface User {
   id: number;
@@ -75,6 +76,17 @@ export interface Project {
   description: string | null;
   status: ProjectStatus;
   created_by: number;
+  created_at: string;
+}
+
+export interface Feedback {
+  id: number;
+  user_id: number;
+  user_name: string;
+  type: FeedbackType;
+  notes: string;
+  reply: string | null;
+  replied_at: string | null;
   created_at: string;
 }
 

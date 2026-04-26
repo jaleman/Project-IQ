@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from config import settings
 from database import engine, Base
-from routers import auth, users, events, tasks, shifts, agents, notifications, projects
+from routers import auth, users, events, tasks, shifts, agents, notifications, projects, feedback
 
 logger = structlog.get_logger()
 
@@ -43,6 +43,22 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE tasks "
             "ADD COLUMN IF NOT EXISTS project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL"
         ))
+        # Feedback
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                type VARCHAR(30) NOT NULL,
+                notes TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """))
+        await conn.execute(text(
+            "ALTER TABLE feedback ADD COLUMN IF NOT EXISTS reply TEXT"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE feedback ADD COLUMN IF NOT EXISTS replied_at TIMESTAMPTZ"
+        ))
     logger.info("ProjectIQ backend started", model=settings.ollama_model)
     yield
     await engine.dispose()
@@ -75,6 +91,7 @@ app.include_router(shifts, prefix="/api/shifts", tags=["shifts"])
 app.include_router(agents, prefix="/api/agents", tags=["agents"])
 app.include_router(notifications, prefix="/api/notifications", tags=["notifications"])
 app.include_router(projects, prefix="/api/projects", tags=["projects"])
+app.include_router(feedback, prefix="/api/feedback", tags=["feedback"])
 
 
 @app.get("/health")
