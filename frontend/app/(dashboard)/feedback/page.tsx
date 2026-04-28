@@ -52,7 +52,7 @@ function ReplyForm({ item, onDone }: { item: Feedback; onDone: () => void }) {
         </button>
         <button
           onClick={() => mutation.mutate()}
-          disabled={mutation.isPending || !text.trim()}
+          disabled={mutation.isPending}
           className="px-3 py-1.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition disabled:opacity-60"
         >
           {mutation.isPending ? "Saving…" : "Save Reply"}

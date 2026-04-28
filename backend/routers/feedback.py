@@ -75,8 +75,13 @@ async def reply_to_feedback(
     if not item:
         raise HTTPException(status_code=404, detail="Feedback not found")
 
-    item.reply = payload.reply
-    item.replied_at = datetime.now(timezone.utc)
+    new_text = payload.reply.strip()
+    if not new_text:
+        item.reply = None
+        item.replied_at = None
+    else:
+        item.reply = new_text
+        item.replied_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(item)
 
