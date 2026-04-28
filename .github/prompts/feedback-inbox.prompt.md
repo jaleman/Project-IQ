@@ -51,7 +51,7 @@ Parse the JSON — entries are under `.data`.
 ## 3 — Display Entries
 
 Format entries as a readable list. For each entry show:
-- **#ID** — `user_name` (`type`) — `created_at` (date only)
+- **#ID** — `user_name` (`type`) — `created_at` (date only) — if `done` is true show **[DONE]**
 - Notes: `notes`
 - Reply: if `reply` is set, show it in a blockquote with the `replied_at` date; otherwise show _(no reply yet)_
 
@@ -62,19 +62,27 @@ If there are no entries, tell the user the inbox is empty and stop.
 ## 4 — Ask What to Do
 
 Ask the user (via `vscode_askQuestions`):
-- Which feedback ID they want to reply to (number, or "done" to exit)
-- What their reply should be
+- Which feedback ID to act on (number, or "exit" to stop)
+- What action: **reply** or **done** (toggle done/reopen)
 
-If they choose "done", stop.
+If they choose "exit", stop.
 
-## 5 — Send the Reply
+## 5 — Perform the Action
 
+**If action is "reply"**, ask for the reply text, then:
 ```bash
 curl -s -X PATCH \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"reply\": \"REPLY_TEXT\"}" \
   http://localhost/api/feedback/ID/reply
+```
+
+**If action is "done"**, toggle the done state (marks done if open, reopens if already done):
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer TOKEN" \
+  http://localhost/api/feedback/ID/done
 ```
 
 Show the updated entry on success, then loop back to step 4.

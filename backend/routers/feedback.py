@@ -23,6 +23,7 @@ def _to_out(f: Feedback, user_name: str) -> FeedbackOut:
         notes=f.notes,
         reply=f.reply,
         replied_at=f.replied_at,
+        done=f.done,
         created_at=f.created_at,
     )
 
@@ -75,8 +76,36 @@ async def reply_to_feedback(
     if not item:
         raise HTTPException(status_code=404, detail="Feedback not found")
 
-    item.reply = payload.reply
-    item.replied_at = datetime.now(timezone.utc)
+    new_text = payload.reply.strip()
+    if not new_text:
+        item.reply = None
+        item.replied_at = None
+    else:
+        item.reply = new_text
+        item.replied_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(item)
+
+    user_result = await db.execute(select(User).where(User.id == item.user_id))
+    user = user_result.scalar_one_or_none()
+    return ok(_to_out(item, user.name if user else "Unknown"))
+
+
+@router.patch("/{feedback_id}/done")
+async def mark_feedback_done(
+    feedback_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.admin, UserRole.leader):
+        raise HTTPException(status_code=403, detail="Not authorised")
+
+    result = await db.execute(select(Feedback).where(Feedback.id == feedback_id))
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+
+    item.done = not item.done
     await db.commit()
     await db.refresh(item)
 

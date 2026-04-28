@@ -92,6 +92,7 @@ export interface Feedback {
   notes: string;
   reply: string | null;
   replied_at: string | null;
+  done: boolean;
   created_at: string;
 }
 

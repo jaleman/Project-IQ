@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi, feedbackApi } from "@/lib/api";
 import type { Feedback, FeedbackType, User } from "@/lib/types";
 import { format } from "date-fns";
-import { MessageSquare, CheckCircle2 } from "lucide-react";
+import { MessageSquare, CheckCircle2, CircleCheck } from "lucide-react";
 
 const TYPE_BADGE: Record<FeedbackType, string> = {
   bug_report: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
@@ -52,7 +52,7 @@ function ReplyForm({ item, onDone }: { item: Feedback; onDone: () => void }) {
         </button>
         <button
           onClick={() => mutation.mutate()}
-          disabled={mutation.isPending || !text.trim()}
+          disabled={mutation.isPending}
           className="px-3 py-1.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition disabled:opacity-60"
         >
           {mutation.isPending ? "Saving…" : "Save Reply"}
@@ -66,6 +66,7 @@ function ReplyForm({ item, onDone }: { item: Feedback; onDone: () => void }) {
 }
 
 export default function FeedbackPage() {
+  const qc = useQueryClient();
   const { data: meRes } = useQuery({ queryKey: ["me"], queryFn: () => authApi.me(), retry: false });
   const me = meRes?.data?.data as User | undefined;
   const isAdminOrLeader = ["admin", "leader"].includes(me?.role ?? "");
@@ -77,6 +78,11 @@ export default function FeedbackPage() {
   const items: Feedback[] = data?.data?.data ?? [];
 
   const [replyingId, setReplyingId] = useState<number | null>(null);
+
+  const doneMutation = useMutation({
+    mutationFn: (id: number) => feedbackApi.markDone(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["feedback"] }),
+  });
 
   return (
     <div>
@@ -98,7 +104,7 @@ export default function FeedbackPage() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5"
+              className={`bg-white dark:bg-slate-800 rounded-2xl border shadow-sm p-5 transition ${item.done ? "opacity-60 border-slate-200 dark:border-slate-700" : "border-slate-100 dark:border-slate-700"}`}
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-3 mb-3">
@@ -112,6 +118,11 @@ export default function FeedbackPage() {
                   {item.reply && (
                     <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
                       <CheckCircle2 size={13} /> Replied
+                    </span>
+                  )}
+                  {item.done && (
+                    <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      <CircleCheck size={13} /> Done
                     </span>
                   )}
                 </div>
@@ -149,12 +160,21 @@ export default function FeedbackPage() {
                 replyingId === item.id ? (
                   <ReplyForm item={item} onDone={() => setReplyingId(null)} />
                 ) : (
-                  <button
-                    onClick={() => setReplyingId(item.id)}
-                    className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-200 font-medium transition"
-                  >
-                    {item.reply ? "Edit reply" : "Reply"}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setReplyingId(item.id)}
+                      className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-200 font-medium transition"
+                    >
+                      {item.reply ? "Edit reply" : "Reply"}
+                    </button>
+                    <button
+                      onClick={() => doneMutation.mutate(item.id)}
+                      disabled={doneMutation.isPending}
+                      className={`text-xs font-medium transition ${item.done ? "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300" : "text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"}`}
+                    >
+                      {item.done ? "Reopen" : "Mark done"}
+                    </button>
+                  </div>
                 )
               )}
             </div>

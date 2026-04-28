@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
 
         # --- Remove legacy shifts table ---
         await conn.execute(text("DROP TABLE IF EXISTS shifts CASCADE"))
+        await conn.execute(text("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS done BOOLEAN NOT NULL DEFAULT FALSE"))
 
         # --- Notifications columns ---
         await conn.execute(text(
