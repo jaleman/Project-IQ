@@ -20,7 +20,7 @@ class Assignment(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"), index=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     end_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     allocation_pct: Mapped[int] = mapped_column(Integer, default=100)
