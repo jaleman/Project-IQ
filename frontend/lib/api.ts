@@ -21,6 +21,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (error) => {
+    if (
+      typeof window !== "undefined" &&
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/api/auth/login")
+    ) {
+      localStorage.removeItem("projectiq_token");
+      window.location.replace("/login");
+    }
     const message = error.response?.data?.detail ?? error.message;
     return Promise.reject(new Error(message));
   }
