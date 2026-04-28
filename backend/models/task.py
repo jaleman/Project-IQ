@@ -38,5 +38,5 @@ class Task(Base):
     user: Mapped["User"] = relationship("User", back_populates="tasks")
     project: Mapped[Optional["Project"]] = relationship("Project", back_populates="tasks")
     assignments: Mapped[list["Assignment"]] = relationship(
-        "Assignment", back_populates="task", lazy="selectin"
+        "Assignment", back_populates="task", lazy="selectin", cascade="all, delete-orphan"
     )
