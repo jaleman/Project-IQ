@@ -23,6 +23,7 @@ class FeedbackOut(BaseModel):
     notes: str
     reply: Optional[str] = None
     replied_at: Optional[datetime] = None
+    done: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

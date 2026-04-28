@@ -109,4 +109,5 @@ export const feedbackApi = {
   submit: (payload: { type: string; notes: string }) => api.post("/api/feedback/", payload),
   list: () => api.get("/api/feedback/"),
   reply: (id: number, reply: string) => api.patch(`/api/feedback/${id}/reply`, { reply }),
+  markDone: (id: number) => api.patch(`/api/feedback/${id}/done`),
 };
