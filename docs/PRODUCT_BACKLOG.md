@@ -106,6 +106,7 @@
 | **Dark mode scrollbar** | Custom 6px webkit scrollbar in `globals.css`; visible `slate-500` thumb in dark mode, `slate-300` in light mode. Applies globally. |
 | **Project pill contrast fix** | Project name badge on task cards changed from `brand-50/brand-900` to `indigo-100/indigo-400` — clearly visible in both light and dark mode. |
 | **Lock task actions when done** | Assign Resource and Edit icons disabled + faded when task status is `done`; remove-resource `×` hidden on assignee chips. All re-enable automatically when status changes back. |
+| **Archived task status** | New `archived` enum value on `TaskStatus`. Alembic migration `444dbeb1c73a`. Archived tasks: hidden from All filter, status dropdown disabled, edit/assign/remove-resource all locked. Only visible via new **Archive** filter pill at end of pill row. |
 
 ---
 
