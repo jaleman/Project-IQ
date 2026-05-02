@@ -355,10 +355,17 @@ export default function TasksPage() {
   const [assignTask, setAssignTask] = useState<Task | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilterKey>("all");
 
-  const filteredTasks = useMemo(
-    () => (taskFilter === "all" ? tasks : tasks.filter((t) => t.status === taskFilter)),
-    [tasks, taskFilter]
-  );
+  const STATUS_ORDER: Record<TaskStatus, number> = {
+    in_progress: 0,
+    planned: 1,
+    pending: 2,
+    done: 3,
+  };
+
+  const filteredTasks = useMemo(() => {
+    const base = taskFilter === "all" ? tasks : tasks.filter((t) => t.status === taskFilter);
+    return [...base].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+  }, [tasks, taskFilter]);
 
   return (
     <div>
