@@ -102,6 +102,10 @@
 | Feedback inbox Copilot prompt | `/feedback-inbox` — hits production API, workspace-relative creds path, works on any machine. |
 | **Task status filter pills** | All / In Progress / Planned / Pending / Done pills on Tasks page. Client-side `useMemo` filter. Matches Notifications page UX (same pill styles). |
 | **Task list sort order** | Tasks sorted by status: In Progress → Planned → Pending → Done. Applied before rendering and within any active filter. |
+| **Tasks page scrollable list** | Header (title + filter pills) fixed; task list scrolls independently via `flex-1 overflow-y-auto`. |
+| **Dark mode scrollbar** | Custom 6px webkit scrollbar in `globals.css`; visible `slate-500` thumb in dark mode, `slate-300` in light mode. Applies globally. |
+| **Project pill contrast fix** | Project name badge on task cards changed from `brand-50/brand-900` to `indigo-100/indigo-400` — clearly visible in both light and dark mode. |
+| **Lock task actions when done** | Assign Resource and Edit icons disabled + faded when task status is `done`; remove-resource `×` hidden on assignee chips. All re-enable automatically when status changes back. |
 
 ---
 
