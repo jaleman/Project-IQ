@@ -186,13 +186,18 @@ month, the payment just happens automatically at the right moment.
 
 **The three branches:**
 
-    feature/my-thing    <- you write code here
-          |
-          v  Pull Request (reviewed by the other dev)
-       develop          <- staging branch, auto-deploys to staging.whatiskali.dev
-          |
-          v  Pull Request (final review before going live)
-         main           <- production branch, auto-deploys to whatiskali.dev
+    jaleman-dev  ─┐
+                  ├─  Pull Request (reviewed by the other dev)
+    user1-dev   ─┘        |
+                          v
+                      staging (develop)  <- auto-deploys to staging.whatiskali.dev
+                          |
+                          v  Pull Request (final review before going live)
+                         main           <- production branch, auto-deploys to whatiskali.dev
+
+Each developer has one persistent branch named after them. You work on it freely and open a PR
+into `staging` when you want your changes tested on the shared server. You never need to create
+a new branch unless you want to isolate a risky experiment.
 
 **Pull Request (PR):** When you want to merge a branch, you open a PR on GitHub. It shows exactly what
 changed, line by line. The other developer reviews and approves it. Once approved, you merge it.
@@ -209,8 +214,8 @@ the live site. With branch protection, broken code hits staging first where you 
 
 Here is the complete picture of a feature going from idea to production:
 
-    1.  Joe writes code on  feature/new-thing  (local machine, local DB)
-    2.  Joe opens a Pull Request into develop
+    1.  Joe writes code on  jaleman-dev  (local machine, local DB)
+    2.  Joe opens a Pull Request from jaleman-dev into staging
     3.  Dev 2 reviews the code on GitHub and approves
     4.  Joe merges the PR
     5.  GitHub Actions automatically deploys to staging.whatiskali.dev
@@ -219,7 +224,7 @@ Here is the complete picture of a feature going from idea to production:
           - alembic upgrade head (Neon staging DB)
           - docker compose up --build (staging containers)
     6.  Both developers open staging.whatiskali.dev and verify the feature works
-    7.  Joe opens a Pull Request from develop into main
+    7.  Joe opens a Pull Request from staging into main
     8.  Dev 2 approves
     9.  Joe merges the PR
     10. GitHub Actions automatically deploys to whatiskali.dev
@@ -579,16 +584,15 @@ Option B: Rename jaleman-dev to a feature/ branch and continue using it normally
 
 ## 6. Quick Reference --- Day-to-Day Commands
 
-### Starting a new feature (do these steps in order every time)
+### Starting a work session (do these steps at the start of each day)
 
-    git checkout develop
-    git pull                                              # get latest code from GitHub
-    git checkout -b feature/my-feature-name              # create your feature branch
-    docker compose exec backend alembic upgrade head      # sync your local DB to match the code
+    git checkout jaleman-dev                             # (or user1-dev — your own branch)
+    git pull                                             # get any changes you pushed from another machine
+    docker compose exec backend alembic upgrade head     # sync your local DB to match the code
 
-The alembic step is the new habit. If a teammate merged a schema change while you were on your
-last branch, this applies it to your local database. If nothing changed, it says "already at head"
-and does nothing — always safe to run.
+The alembic step is the new habit. If your teammate merged a schema change into staging and you pulled
+it into your dev branch, this applies it to your local database. If nothing changed, it says
+"already at head" and does nothing — always safe to run.
 
 ### When you change a model (add a column, new table, etc.)
 
@@ -613,7 +617,7 @@ new column automatically. No manual ALTER TABLE needed.
     # Check what migration version your database is currently at
     docker compose exec backend alembic current
 
-    # Push your branch and open a PR to develop
-    git push -u origin feature/my-feature-name
-    # Then go to GitHub and open the Pull Request
+    # Push your branch and open a PR to staging
+    git push origin jaleman-dev          # (or user1-dev)
+    # Then go to GitHub and open the Pull Request targeting the staging branch
 
