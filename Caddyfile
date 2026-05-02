@@ -23,8 +23,31 @@
     }
 }
 
+(staging-app) {
+    # Route /api/* to the staging backend container
+    handle /api/* {
+        reverse_proxy projectiq-staging-backend-1:8000
+    }
+
+    # All other traffic goes to the staging frontend container
+    handle {
+        reverse_proxy projectiq-staging-frontend-1:3000
+    }
+
+    encode gzip
+
+    log {
+        output stdout
+        format json
+    }
+}
+
 http://www.whatiskali.dev, http://whatiskali.dev {
     import app
+}
+
+http://staging.whatiskali.dev {
+    import staging-app
 }
 
 # Local dev fallback (e.g. http://localhost)
