@@ -20,7 +20,9 @@ export default function TeamPage() {
     queryFn: () => authApi.me(),
     retry: false,
   });
-  const isAdmin = (meRes?.data?.data as User | undefined)?.role === "admin";
+  const me = meRes?.data?.data as User | undefined;
+  const isAdmin = me?.role === "admin";
+  const canManageUsers = me?.role === "admin" || me?.role === "leader";
 
   const { data, isLoading } = useQuery({
     queryKey: ["users"],
@@ -31,7 +33,14 @@ export default function TeamPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => usersApi.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    onError: (e: Error) => alert(`Failed to delete user: ${e.message}`),
   });
+
+  const handleDelete = (u: User) => {
+    if (confirm(`Delete ${u.name} (${u.email})? This cannot be undone.`)) {
+      deleteMutation.mutate(u.id);
+    }
+  };
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
@@ -95,10 +104,12 @@ export default function TeamPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {isAdmin && (
+                    {canManageUsers && me?.id !== u.id && (
                       <button
-                        onClick={() => deleteMutation.mutate(u.id)}
-                        className="text-slate-400 hover:text-red-500 transition"
+                        onClick={() => handleDelete(u)}
+                        disabled={deleteMutation.isPending}
+                        className="text-slate-400 hover:text-red-500 transition disabled:opacity-50"
+                        title="Delete user"
                       >
                         <Trash2 size={16} />
                       </button>
