@@ -419,7 +419,7 @@ export default function TasksPage() {
                     {t.is_private && <Lock size={14} className="text-slate-400" />}
                     {t.shared_with && <Share2 size={14} className="text-blue-400" />}
                     {t.project_id && (
-                      <span className="text-xs bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-400/25 dark:text-indigo-200 px-2 py-0.5 rounded-full">
                         {projectMap[t.project_id] ?? "Project"}
                       </span>
                     )}
