@@ -100,6 +100,8 @@
 | Staging environment (`staging.whatiskali.dev`) | Separate Docker Compose project on Mac Mini; Neon Postgres cloud DB; seed data live. |
 | Branch protection on `main` + `staging` | Dismiss stale reviews; 0 required approvals (solo dev — raise to 1 when second dev joins full-time). |
 | Feedback inbox Copilot prompt | `/feedback-inbox` — hits production API, workspace-relative creds path, works on any machine. |
+| **Task status filter pills** | All / In Progress / Planned / Pending / Done pills on Tasks page. Client-side `useMemo` filter. Matches Notifications page UX (same pill styles). |
+| **Task list sort order** | Tasks sorted by status: In Progress → Planned → Pending → Done. Applied before rendering and within any active filter. |
 
 ---
 

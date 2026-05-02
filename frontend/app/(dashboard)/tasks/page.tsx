@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tasksApi, projectsApi, usersApi, assignmentsApi } from "@/lib/api";
 import type { Task, TaskStatus, Project, User, Assignment, AssignmentStatus } from "@/lib/types";
@@ -21,6 +21,16 @@ const ASSIGN_STATUS_STYLES: Record<AssignmentStatus, string> = {
   on_hold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
   completed: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300",
 };
+
+type TaskFilterKey = "all" | TaskStatus;
+
+const TASK_FILTERS: { key: TaskFilterKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "in_progress", label: "In Progress" },
+  { key: "planned", label: "Planned" },
+  { key: "pending", label: "Pending" },
+  { key: "done", label: "Done" },
+];
 
 // ─── Task create/edit modal ───────────────────────────────────────────────────
 
@@ -343,6 +353,19 @@ export default function TasksPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [assignTask, setAssignTask] = useState<Task | null>(null);
+  const [taskFilter, setTaskFilter] = useState<TaskFilterKey>("all");
+
+  const STATUS_ORDER: Record<TaskStatus, number> = {
+    in_progress: 0,
+    planned: 1,
+    pending: 2,
+    done: 3,
+  };
+
+  const filteredTasks = useMemo(() => {
+    const base = taskFilter === "all" ? tasks : tasks.filter((t) => t.status === taskFilter);
+    return [...base].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+  }, [tasks, taskFilter]);
 
   return (
     <div>
@@ -356,12 +379,28 @@ export default function TasksPage() {
         </button>
       </div>
 
+      <div className="flex gap-2 mb-4">
+        {TASK_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setTaskFilter(f.key)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+              taskFilter === f.key
+                ? "bg-brand-600 text-white"
+                : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <p className="text-slate-500">Loading tasks...</p>
       ) : (
         <div className="space-y-3">
-          {tasks.length === 0 && <p className="text-slate-400">No tasks yet.</p>}
-          {tasks.map((t) => {
+          {filteredTasks.length === 0 && <p className="text-slate-400">No tasks match this filter.</p>}
+          {filteredTasks.map((t) => {
             const taskAssignments = assignmentsByTask[t.id] ?? [];
             return (
               <div

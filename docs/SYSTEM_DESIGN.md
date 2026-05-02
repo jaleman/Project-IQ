@@ -174,7 +174,7 @@ frontend/
 │   │   ├── dashboard/page.tsx      # Stat cards + AI quick actions
 │   │   ├── calendar/page.tsx       # Projects accordion (role-scoped) + derived status pills + filter pills + New Task per project
 │   │   ├── team/page.tsx           # Team member list (Add/Delete admin-gated)
-│   │   ├── tasks/page.tsx          # Task list; create/edit modal (project, dates, hours); status dropdown; Assign Resource modal; assignee chips with remove
+│   │   ├── tasks/page.tsx          # Task list; status filter pills (All/In Progress/Planned/Pending/Done); sorted by status; create/edit modal (project, dates, hours); status dropdown; Assign Resource modal; assignee chips with remove
 │   │   └── notifications/page.tsx  # Filters · per-id mark read · archive
 ├── components/
 │   ├── Sidebar.tsx
