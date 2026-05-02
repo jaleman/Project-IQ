@@ -458,14 +458,16 @@ export default function TasksPage() {
                         >
                           {userMap[a.user_id] ?? `User ${a.user_id}`}
                           <span className="opacity-60">{a.allocation_pct}%</span>
-                          <button
-                            type="button"
-                            onClick={() => deleteAssignmentMutation.mutate(a.id)}
-                            className="ml-0.5 opacity-50 hover:opacity-100 hover:text-red-500 transition"
-                            title="Remove assignment"
-                          >
-                            <X size={10} />
-                          </button>
+                          {t.status !== "done" && (
+                            <button
+                              type="button"
+                              onClick={() => deleteAssignmentMutation.mutate(a.id)}
+                              className="ml-0.5 opacity-50 hover:opacity-100 hover:text-red-500 transition"
+                              title="Remove assignment"
+                            >
+                              <X size={10} />
+                            </button>
+                          )}
                         </span>
                       ))}
                     </div>
