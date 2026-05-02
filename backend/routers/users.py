@@ -18,6 +18,11 @@ def _require_admin(current_user: User):
         raise HTTPException(status_code=403, detail="Admin access required")
 
 
+def _require_admin_or_leader(current_user: User):
+    if current_user.role not in (UserRole.admin, UserRole.leader):
+        raise HTTPException(status_code=403, detail="Admin or leader access required")
+
+
 @router.get("/")
 async def list_users(
     db: AsyncSession = Depends(get_db),
@@ -90,7 +95,9 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _require_admin(current_user)
+    _require_admin_or_leader(current_user)
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
