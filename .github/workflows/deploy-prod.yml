@@ -1,0 +1,20 @@
+name: Deploy - Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: Deploy production
+        run: |
+          set -e
+          cd ${{ secrets.DEPLOY_PATH }}
+          git fetch origin main
+          git reset --hard origin/main
+          docker compose exec -T backend alembic upgrade head
+          docker compose up -d --build

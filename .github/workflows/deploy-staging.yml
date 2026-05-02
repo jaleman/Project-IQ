@@ -1,0 +1,20 @@
+name: Deploy - Staging
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: staging
+
+    steps:
+      - name: Deploy staging
+        run: |
+          set -e
+          cd ${{ secrets.DEPLOY_PATH }}
+          git fetch origin staging
+          git reset --hard origin/staging
+          COMPOSE_PROJECT_NAME=projectiq-staging docker compose exec -T backend alembic upgrade head
+          COMPOSE_PROJECT_NAME=projectiq-staging docker compose up -d --build

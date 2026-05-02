@@ -23,8 +23,31 @@
     }
 }
 
+(staging-app) {
+    # Staging containers are on a separate Docker network.
+    # Route via host-mapped ports instead of container names.
+    handle /api/* {
+        reverse_proxy host.docker.internal:8002
+    }
+
+    handle {
+        reverse_proxy host.docker.internal:3002
+    }
+
+    encode gzip
+
+    log {
+        output stdout
+        format json
+    }
+}
+
 http://www.whatiskali.dev, http://whatiskali.dev {
     import app
+}
+
+http://staging.whatiskali.dev {
+    import staging-app
 }
 
 # Local dev fallback (e.g. http://localhost)
