@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tasksApi, projectsApi, usersApi, assignmentsApi } from "@/lib/api";
 import type { Task, TaskStatus, Project, User, Assignment, AssignmentStatus } from "@/lib/types";
@@ -357,6 +357,29 @@ export default function TasksPage() {
   const [assignTask, setAssignTask] = useState<Task | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilterKey>("all");
 
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  const taskCardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // Read ?task=<id> from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("task");
+    if (id) setHighlightId(Number(id));
+  }, []);
+
+  // Auto-switch filter so the highlighted task is visible
+  useEffect(() => {
+    if (!highlightId || tasks.length === 0) return;
+    const target = tasks.find((t) => t.id === highlightId);
+    if (!target) return;
+    if (target.status === "archived") {
+      setTaskFilter("archived");
+    } else if (taskFilter === "archived") {
+      setTaskFilter("all");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId, tasks]);
+
   const STATUS_ORDER: Record<TaskStatus, number> = {
     in_progress: 0,
     planned: 1,
@@ -372,6 +395,14 @@ export default function TasksPage() {
         : tasks.filter((t) => t.status === taskFilter);
     return [...base].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
   }, [tasks, taskFilter]);
+
+  // Scroll to and highlight the target task card
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = taskCardRefs.current.get(highlightId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, filteredTasks]);
 
   return (
     <div className="flex flex-col h-full">
@@ -416,7 +447,12 @@ export default function TasksPage() {
             return (
               <div
                 key={t.id}
-                className="flex items-start gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700"
+                ref={(el) => { if (el) taskCardRefs.current.set(t.id, el); else taskCardRefs.current.delete(t.id); }}
+                className={`flex items-start gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border transition-all duration-300 ${
+                  highlightId === t.id
+                    ? "border-brand-400 dark:border-brand-500 ring-2 ring-brand-300 dark:ring-brand-600"
+                    : "border-slate-100 dark:border-slate-700"
+                }`}
               >
                 <div className="flex-1 min-w-0">
                   {/* Title row */}
