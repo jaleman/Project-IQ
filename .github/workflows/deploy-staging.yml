@@ -14,6 +14,7 @@ jobs:
         run: |
           set -e
           cd ${{ secrets.DEPLOY_PATH }}
-          git pull origin staging
+          git fetch origin staging
+          git reset --hard origin/staging
           COMPOSE_PROJECT_NAME=projectiq-staging docker compose exec -T backend alembic upgrade head
           COMPOSE_PROJECT_NAME=projectiq-staging docker compose up -d --build
