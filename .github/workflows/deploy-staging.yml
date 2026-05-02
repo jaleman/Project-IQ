@@ -11,8 +11,12 @@ jobs:
 
     steps:
       - name: Deploy staging
+        env:
+          DOCKER_CONFIG: /tmp/docker-runner-config
         run: |
           set -e
+          mkdir -p $DOCKER_CONFIG
+          echo '{"auths":{}}' > $DOCKER_CONFIG/config.json
           cd ${{ secrets.DEPLOY_PATH }}
           git fetch origin staging
           git reset --hard origin/staging
