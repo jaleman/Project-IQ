@@ -6,19 +6,14 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: production
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            git pull origin main
-            docker compose exec -T backend alembic upgrade head
-            docker compose up -d --build
+      - name: Deploy production
+        run: |
+          set -e
+          cd ${{ secrets.DEPLOY_PATH }}
+          git pull origin main
+          docker compose exec -T backend alembic upgrade head
+          docker compose up -d --build
