@@ -12,6 +12,7 @@ const STATUS_STYLES: Record<TaskStatus, string> = {
   pending: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
   in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
   done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  archived: "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500",
 };
 
 
@@ -30,6 +31,7 @@ const TASK_FILTERS: { key: TaskFilterKey; label: string }[] = [
   { key: "planned", label: "Planned" },
   { key: "pending", label: "Pending" },
   { key: "done", label: "Done" },
+  { key: "archived", label: "Archive" },
 ];
 
 // ─── Task create/edit modal ───────────────────────────────────────────────────
@@ -360,10 +362,14 @@ export default function TasksPage() {
     planned: 1,
     pending: 2,
     done: 3,
+    archived: 4,
   };
 
   const filteredTasks = useMemo(() => {
-    const base = taskFilter === "all" ? tasks : tasks.filter((t) => t.status === taskFilter);
+    const base =
+      taskFilter === "all"
+        ? tasks.filter((t) => t.status !== "archived")
+        : tasks.filter((t) => t.status === taskFilter);
     return [...base].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
   }, [tasks, taskFilter]);
 
@@ -458,7 +464,7 @@ export default function TasksPage() {
                         >
                           {userMap[a.user_id] ?? `User ${a.user_id}`}
                           <span className="opacity-60">{a.allocation_pct}%</span>
-                          {t.status !== "done" && (
+                          {t.status !== "done" && t.status !== "archived" && (
                             <button
                               type="button"
                               onClick={() => deleteAssignmentMutation.mutate(a.id)}
@@ -478,29 +484,31 @@ export default function TasksPage() {
                 <div className="flex items-center gap-2 shrink-0 pt-0.5">
                   <select
                     value={t.status}
+                    disabled={t.status === "archived"}
                     onChange={(e) =>
                       updateMutation.mutate({ id: t.id, status: e.target.value as TaskStatus })
                     }
-                    className={`text-xs px-2 py-1 rounded-full font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 ${STATUS_STYLES[t.status]}`}
+                    className={`text-xs px-2 py-1 rounded-full font-semibold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 ${STATUS_STYLES[t.status]} ${t.status === "archived" ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                   >
                     <option value="pending">pending</option>
                     <option value="planned">planned</option>
                     <option value="in_progress">in progress</option>
                     <option value="done">done</option>
+                    <option value="archived">archived</option>
                   </select>
                   <button
-                    onClick={() => t.status !== "done" && setAssignTask(t)}
-                    disabled={t.status === "done"}
-                    className={`transition ${t.status === "done" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-green-500 dark:hover:text-green-400"}`}
-                    title={t.status === "done" ? "Cannot assign resource to a completed task" : "Assign resource"}
+                    onClick={() => t.status !== "done" && t.status !== "archived" && setAssignTask(t)}
+                    disabled={t.status === "done" || t.status === "archived"}
+                    className={`transition ${t.status === "done" || t.status === "archived" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-green-500 dark:hover:text-green-400"}`}
+                    title={t.status === "done" || t.status === "archived" ? "Cannot assign resource" : "Assign resource"}
                   >
                     <UserPlus size={15} />
                   </button>
                   <button
-                    onClick={() => t.status !== "done" && setEditTask(t)}
-                    disabled={t.status === "done"}
-                    className={`transition ${t.status === "done" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-brand-500 dark:hover:text-brand-400"}`}
-                    title={t.status === "done" ? "Cannot edit a completed task" : "Edit task"}
+                    onClick={() => t.status !== "done" && t.status !== "archived" && setEditTask(t)}
+                    disabled={t.status === "done" || t.status === "archived"}
+                    className={`transition ${t.status === "done" || t.status === "archived" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-brand-500 dark:hover:text-brand-400"}`}
+                    title={t.status === "done" || t.status === "archived" ? "Cannot edit task" : "Edit task"}
                   >
                     <Pencil size={15} />
                   </button>
