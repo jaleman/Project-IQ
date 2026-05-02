@@ -26,9 +26,9 @@ type TaskFilterKey = "all" | TaskStatus;
 
 const TASK_FILTERS: { key: TaskFilterKey; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "in_progress", label: "In Progress" },
   { key: "planned", label: "Planned" },
   { key: "pending", label: "Pending" },
-  { key: "in_progress", label: "In Progress" },
   { key: "done", label: "Done" },
 ];
 
