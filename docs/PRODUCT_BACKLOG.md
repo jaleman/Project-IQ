@@ -44,6 +44,7 @@
 
 | Item | Notes |
 |---|---|
+| **Task status filter pills on Tasks page** | Add All / Pending / Planned / In Progress / Done filter pills above the task list. Match the Notifications page UX exactly: same `rounded-full` pill style, `bg-brand-600 text-white` for active, ghost border for inactive, client-side filter via `useMemo`. No backend changes needed — filter against the already-fetched task list. |
 | Assign task to another user | UI for `shared_with`; consider switching to a join table later. |
 | Due dates + reminder notification job | Reuse the lifecycle notification model. |
 
