@@ -99,7 +99,6 @@
 | Frontend pages assume `data.data.data` shape | A response interceptor that auto-unwraps `{data,error,status}` would clean this up everywhere. |
 | `services/` folder is empty | When business logic in routers grows, extract here. |
 | No CI yet | Add a GitHub Actions workflow once we move off solo dev. |
-| Sidebar has no auth gate | Visiting `/dashboard` without a token should redirect to `/login`. |
 | Dev hot-reload reloads on every backend file edit | Acceptable; just keep an eye on agent files thrashing during edits. |
 
 ---
@@ -108,6 +107,11 @@
 
 | Item | When |
 |---|---|
+| **Fix: dark mode flash on refresh (FOUC)** — Blocking inline `<script>` in `<head>` applies `dark` class before first paint; `suppressHydrationWarning` on `<html>` prevents React mismatch. | Apr 2026 |
+| **Feedback: Mark done / Reopen toggle** — `done` boolean column on `Feedback`; `PATCH /api/feedback/{id}/done` endpoint; Done badge + dimmed card + toggle button on frontend; prompt updated. | Apr 2026 |
+| **Feedback: reply UX fixes** — Reply now replaces existing text (not appends); blank reply clears the field; Save button always enabled; textarea pre-filled with existing reply. | Apr 2026 |
+| **Fix: cascade delete assignments on task delete** — Added `cascade='all, delete-orphan'` to `Task.assignments` and `ondelete='CASCADE'` to `Assignment.task_id` FK. | Apr 2026 |
+| **Auth gate on dashboard** — `AuthGuard` component wraps the dashboard layout; redirects unauthenticated users to `/login`. | Apr 2026 |
 | **Shift → Assignment refactor** — Dropped `Shift` model entirely; added `Assignment` (user_id, task_id, start_date, end_date, allocation_pct, status: planned\|active\|on_hold\|completed). `AssignmentService.detect_overallocation()` added. All shift references removed from agents, bots, voice service, frontend. | Apr 2026 |
 | **Task scheduling fields** — Added `start_date`, `due_date`, `estimated_hours` to `Task` model and schema. | Apr 2026 |
 | **Task modal improvements** — Project dropdown, start/due date pickers, estimated hours field, edit pre-fill. | Apr 2026 |
