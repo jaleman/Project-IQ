@@ -4,7 +4,7 @@
 >
 > **Status legend:** ⏸ not started · 🟡 in progress · ✅ done · 🧊 deferred
 >
-> **Last updated:** April 2026
+> **Last updated:** May 2026
 
 ---
 
@@ -22,7 +22,6 @@
 
 | Item | Notes |
 |---|---|
-| Replace `create_all` + `ALTER IF NOT EXISTS` with **Alembic** migrations | Skeleton already exists in `backend/alembic/`. |
 | Restart resilience test | `docker compose down && up`; confirm admin user, tasks, notifications survive. |
 | Daily Postgres backup | `pg_dump` → host folder (or B2/S3). Cron via `launchd` on the Mac. |
 | Logout endpoint + UI | `/api/auth/logout` + avatar dropdown with **Sign out**. |
@@ -87,6 +86,20 @@
 | **Analytics** | Coverage heatmap; per-user "tasks completed this week". |
 | **Migration to VPS** | Linux host + Ollama in Docker w/ GPU passthrough (or Ollama Cloud). |
 | **Internationalization** | i18n scaffold; date/time formatting per user locale. |
+
+---
+
+## Done (shipped)
+
+| Item | Notes |
+|---|---|
+| Replace `create_all` + `ALTER IF NOT EXISTS` with **Alembic** migrations | Initial migration `a9e6e26c7ef9` applied to production and staging. `lifespan` no longer runs DDL. |
+| Dev seed script (`backend/scripts/seed_dev.py`) | Creates admin + member user, 1 project, 4 tasks. Run once after `alembic upgrade head`. |
+| GitHub Actions CI/CD — staging deploy | `deploy-staging.yml` on self-hosted runner; auto-deploys on push to `staging`. |
+| GitHub Actions CI/CD — production deploy | `deploy-prod.yml` on self-hosted runner; requires manual approval in `production` environment. |
+| Staging environment (`staging.whatiskali.dev`) | Separate Docker Compose project on Mac Mini; Neon Postgres cloud DB; seed data live. |
+| Branch protection on `main` + `staging` | Dismiss stale reviews; 0 required approvals (solo dev — raise to 1 when second dev joins full-time). |
+| Feedback inbox Copilot prompt | `/feedback-inbox` — hits production API, workspace-relative creds path, works on any machine. |
 
 ---
 
