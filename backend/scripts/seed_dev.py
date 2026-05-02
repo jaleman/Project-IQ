@@ -19,6 +19,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
+import ssl
 from config import settings
 from models.user import User, UserRole
 from models.project import Project, ProjectStatus
@@ -26,7 +27,9 @@ from models.task import Task, TaskStatus
 from models.assignment import Assignment, AssignmentStatus
 from routers.deps import hash_password
 
-engine = create_async_engine(settings.database_url)
+_db_url = settings.database_url.replace("?sslmode=require", "").replace("&sslmode=require", "")
+_connect_args = {"ssl": ssl.create_default_context()} if "sslmode=require" in settings.database_url else {}
+engine = create_async_engine(_db_url, connect_args=_connect_args)
 Session = async_sessionmaker(engine, expire_on_commit=False)
 
 
