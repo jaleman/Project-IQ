@@ -12,6 +12,7 @@ const STATUS_STYLES: Record<TaskStatus, string> = {
   pending: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
   in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
   done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  archived: "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500",
 };
 
 
@@ -30,6 +31,7 @@ const TASK_FILTERS: { key: TaskFilterKey; label: string }[] = [
   { key: "planned", label: "Planned" },
   { key: "pending", label: "Pending" },
   { key: "done", label: "Done" },
+  { key: "archived", label: "Archive" },
 ];
 
 // ─── Task create/edit modal ───────────────────────────────────────────────────
@@ -360,41 +362,50 @@ export default function TasksPage() {
     planned: 1,
     pending: 2,
     done: 3,
+    archived: 4,
   };
 
   const filteredTasks = useMemo(() => {
-    const base = taskFilter === "all" ? tasks : tasks.filter((t) => t.status === taskFilter);
+    const base =
+      taskFilter === "all"
+        ? tasks.filter((t) => t.status !== "archived")
+        : tasks.filter((t) => t.status === taskFilter);
     return [...base].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
   }, [tasks, taskFilter]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tasks</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
-        >
-          <Plus size={16} /> New Task
-        </button>
-      </div>
-
-      <div className="flex gap-2 mb-4">
-        {TASK_FILTERS.map((f) => (
+    <div className="flex flex-col h-full">
+      {/* Fixed header — title + filter pills */}
+      <div className="shrink-0">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tasks</h1>
           <button
-            key={f.key}
-            onClick={() => setTaskFilter(f.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-              taskFilter === f.key
-                ? "bg-brand-600 text-white"
-                : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
-            }`}
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
           >
-            {f.label}
+            <Plus size={16} /> New Task
           </button>
-        ))}
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {TASK_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setTaskFilter(f.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                taskFilter === f.key
+                  ? "bg-brand-600 text-white"
+                  : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Scrollable task list */}
+      <div className="flex-1 overflow-y-auto">
       {isLoading ? (
         <p className="text-slate-500">Loading tasks...</p>
       ) : (
@@ -414,7 +425,7 @@ export default function TasksPage() {
                     {t.is_private && <Lock size={14} className="text-slate-400" />}
                     {t.shared_with && <Share2 size={14} className="text-blue-400" />}
                     {t.project_id && (
-                      <span className="text-xs bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-400/25 dark:text-indigo-200 px-2 py-0.5 rounded-full">
                         {projectMap[t.project_id] ?? "Project"}
                       </span>
                     )}
@@ -453,14 +464,16 @@ export default function TasksPage() {
                         >
                           {userMap[a.user_id] ?? `User ${a.user_id}`}
                           <span className="opacity-60">{a.allocation_pct}%</span>
-                          <button
-                            type="button"
-                            onClick={() => deleteAssignmentMutation.mutate(a.id)}
-                            className="ml-0.5 opacity-50 hover:opacity-100 hover:text-red-500 transition"
-                            title="Remove assignment"
-                          >
-                            <X size={10} />
-                          </button>
+                          {t.status !== "done" && t.status !== "archived" && (
+                            <button
+                              type="button"
+                              onClick={() => deleteAssignmentMutation.mutate(a.id)}
+                              className="ml-0.5 opacity-50 hover:opacity-100 hover:text-red-500 transition"
+                              title="Remove assignment"
+                            >
+                              <X size={10} />
+                            </button>
+                          )}
                         </span>
                       ))}
                     </div>
@@ -471,27 +484,31 @@ export default function TasksPage() {
                 <div className="flex items-center gap-2 shrink-0 pt-0.5">
                   <select
                     value={t.status}
+                    disabled={t.status === "archived"}
                     onChange={(e) =>
                       updateMutation.mutate({ id: t.id, status: e.target.value as TaskStatus })
                     }
-                    className={`text-xs px-2 py-1 rounded-full font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 ${STATUS_STYLES[t.status]}`}
+                    className={`text-xs px-2 py-1 rounded-full font-semibold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 ${STATUS_STYLES[t.status]} ${t.status === "archived" ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                   >
                     <option value="pending">pending</option>
                     <option value="planned">planned</option>
                     <option value="in_progress">in progress</option>
                     <option value="done">done</option>
+                    <option value="archived">archived</option>
                   </select>
                   <button
-                    onClick={() => setAssignTask(t)}
-                    className="text-slate-300 hover:text-green-500 dark:hover:text-green-400 transition"
-                    title="Assign resource"
+                    onClick={() => t.status !== "done" && t.status !== "archived" && setAssignTask(t)}
+                    disabled={t.status === "done" || t.status === "archived"}
+                    className={`transition ${t.status === "done" || t.status === "archived" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-green-500 dark:hover:text-green-400"}`}
+                    title={t.status === "done" || t.status === "archived" ? "Cannot assign resource" : "Assign resource"}
                   >
                     <UserPlus size={15} />
                   </button>
                   <button
-                    onClick={() => setEditTask(t)}
-                    className="text-slate-300 hover:text-brand-500 dark:hover:text-brand-400 transition"
-                    title="Edit task"
+                    onClick={() => t.status !== "done" && t.status !== "archived" && setEditTask(t)}
+                    disabled={t.status === "done" || t.status === "archived"}
+                    className={`transition ${t.status === "done" || t.status === "archived" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-brand-500 dark:hover:text-brand-400"}`}
+                    title={t.status === "done" || t.status === "archived" ? "Cannot edit task" : "Edit task"}
                   >
                     <Pencil size={15} />
                   </button>
@@ -508,6 +525,7 @@ export default function TasksPage() {
           })}
         </div>
       )}
+      </div>
 
       {showCreate && <TaskModal onClose={() => setShowCreate(false)} />}
       {editTask && <TaskModal task={editTask} onClose={() => setEditTask(null)} />}

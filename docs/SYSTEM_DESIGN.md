@@ -174,7 +174,7 @@ frontend/
 │   │   ├── dashboard/page.tsx      # Stat cards + AI quick actions
 │   │   ├── calendar/page.tsx       # Projects accordion (role-scoped) + derived status pills + filter pills + New Task per project
 │   │   ├── team/page.tsx           # Team member list (Add/Delete admin-gated)
-│   │   ├── tasks/page.tsx          # Task list; status filter pills (All/In Progress/Planned/Pending/Done); sorted by status; create/edit modal (project, dates, hours); status dropdown; Assign Resource modal; assignee chips with remove
+│   │   ├── tasks/page.tsx          # Task list; fixed header + scrollable list; status filter pills (All/In Progress/Planned/Pending/Done/Archive); archived tasks hidden from All, fully locked; sorted by status; create/edit modal; Assign Resource modal; assignee chips with remove
 │   │   └── notifications/page.tsx  # Filters · per-id mark read · archive
 ├── components/
 │   ├── Sidebar.tsx
@@ -185,6 +185,7 @@ frontend/
 ├── lib/
 │   ├── api.ts                      # Axios + grouped resource APIs: tasksApi, projectsApi, assignmentsApi, usersApi, authApi, notificationsApi
 │   └── types.ts                    # Task, Project, ProjectDetail, Assignment, AssignmentStatus, extended TaskStatus (planned added)
+├── globals.css                 # Global styles; custom scrollbar (6px, rounded; slate-500 in dark mode)
 └── ...config files
 ```
 
@@ -194,6 +195,7 @@ Conventions:
 - Dark mode is controlled by the `dark` class on `<html>`. Preference stored in `localStorage["projectiq_theme"]` and initialised from `prefers-color-scheme` on first visit.
 - Most API responses are unwrapped via `data?.data?.data` (envelope is `{data,error,status}`).
 - RBAC: pages check `user.role` from `authApi.me()` to conditionally render admin actions.
+- Scrollbar: custom 6px webkit scrollbar defined in `globals.css`; `slate-300` in light mode, `slate-500` in dark mode.
 
 ### 4.2 Backend (`backend/`)
 
@@ -413,7 +415,7 @@ class Task(Base):
     project_id: int | None (fk projects, on delete set null)
     title: str
     notes: str | None
-    status: enum(planned, pending, in_progress, done) = pending
+    status: enum(planned, pending, in_progress, done, archived) = pending
     is_private: bool = False
     shared_with: str | None          # comma-separated user IDs
     start_date: datetime | None
