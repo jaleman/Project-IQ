@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "leader" | "member";
-export type TaskStatus = "planned" | "pending" | "in_progress" | "done";
+export type TaskStatus = "planned" | "pending" | "in_progress" | "done" | "archived";
 export type ProjectStatus = "active" | "on_hold" | "completed";
 export type FeedbackType = "bug_report" | "feature_request" | "comment" | "other";
 export type AssignmentStatus = "planned" | "active" | "on_hold" | "completed";
