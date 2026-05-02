@@ -368,33 +368,38 @@ export default function TasksPage() {
   }, [tasks, taskFilter]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tasks</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
-        >
-          <Plus size={16} /> New Task
-        </button>
-      </div>
-
-      <div className="flex gap-2 mb-4">
-        {TASK_FILTERS.map((f) => (
+    <div className="flex flex-col h-full">
+      {/* Fixed header — title + filter pills */}
+      <div className="shrink-0">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tasks</h1>
           <button
-            key={f.key}
-            onClick={() => setTaskFilter(f.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-              taskFilter === f.key
-                ? "bg-brand-600 text-white"
-                : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
-            }`}
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
           >
-            {f.label}
+            <Plus size={16} /> New Task
           </button>
-        ))}
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {TASK_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setTaskFilter(f.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                taskFilter === f.key
+                  ? "bg-brand-600 text-white"
+                  : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Scrollable task list */}
+      <div className="flex-1 overflow-y-auto">
       {isLoading ? (
         <p className="text-slate-500">Loading tasks...</p>
       ) : (
@@ -508,6 +513,7 @@ export default function TasksPage() {
           })}
         </div>
       )}
+      </div>
 
       {showCreate && <TaskModal onClose={() => setShowCreate(false)} />}
       {editTask && <TaskModal task={editTask} onClose={() => setEditTask(null)} />}
