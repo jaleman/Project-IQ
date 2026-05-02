@@ -489,16 +489,18 @@ export default function TasksPage() {
                     <option value="done">done</option>
                   </select>
                   <button
-                    onClick={() => setAssignTask(t)}
-                    className="text-slate-300 hover:text-green-500 dark:hover:text-green-400 transition"
-                    title="Assign resource"
+                    onClick={() => t.status !== "done" && setAssignTask(t)}
+                    disabled={t.status === "done"}
+                    className={`transition ${t.status === "done" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-green-500 dark:hover:text-green-400"}`}
+                    title={t.status === "done" ? "Cannot assign resource to a completed task" : "Assign resource"}
                   >
                     <UserPlus size={15} />
                   </button>
                   <button
-                    onClick={() => setEditTask(t)}
-                    className="text-slate-300 hover:text-brand-500 dark:hover:text-brand-400 transition"
-                    title="Edit task"
+                    onClick={() => t.status !== "done" && setEditTask(t)}
+                    disabled={t.status === "done"}
+                    className={`transition ${t.status === "done" ? "text-slate-200 dark:text-slate-700 cursor-not-allowed" : "text-slate-300 hover:text-brand-500 dark:hover:text-brand-400"}`}
+                    title={t.status === "done" ? "Cannot edit a completed task" : "Edit task"}
                   >
                     <Pencil size={15} />
                   </button>
