@@ -579,24 +579,41 @@ Option B: Rename jaleman-dev to a feature/ branch and continue using it normally
 
 ## 6. Quick Reference --- Day-to-Day Commands
 
+### Starting a new feature (do these steps in order every time)
+
+    git checkout develop
+    git pull                                              # get latest code from GitHub
+    git checkout -b feature/my-feature-name              # create your feature branch
+    docker compose exec backend alembic upgrade head      # sync your local DB to match the code
+
+The alembic step is the new habit. If a teammate merged a schema change while you were on your
+last branch, this applies it to your local database. If nothing changed, it says "already at head"
+and does nothing — always safe to run.
+
+### When you change a model (add a column, new table, etc.)
+
+    # 1. Edit the model file
+    # 2. Generate the migration:
+    docker compose exec backend alembic revision --autogenerate -m "describe what changed"
+    # 3. Review the file created in backend/alembic/versions/ — make sure it looks right
+    # 4. Apply it to your local database:
+    docker compose exec backend alembic upgrade head
+    # 5. Commit the model change AND the migration file together:
+    git add backend/models/your_model.py backend/alembic/versions/
+    git commit -m "feat: describe the change"
+
+When your teammate pulls this branch and runs alembic upgrade head, their database gets the
+new column automatically. No manual ALTER TABLE needed.
+
+### Other useful commands
+
     # Start your local stack
     docker compose up -d
 
-    # Apply any new migrations after pulling code
-    docker compose exec backend alembic upgrade head
-
-    # After changing a model, generate a migration
-    docker compose exec backend alembic revision --autogenerate -m "describe the change"
-
-    # Check migration status
+    # Check what migration version your database is currently at
     docker compose exec backend alembic current
 
-    # Start a new feature
-    git checkout develop
-    git pull
-    git checkout -b feature/my-feature-name
-
-    # Push and open a PR to develop
+    # Push your branch and open a PR to develop
     git push -u origin feature/my-feature-name
     # Then go to GitHub and open the Pull Request
 
