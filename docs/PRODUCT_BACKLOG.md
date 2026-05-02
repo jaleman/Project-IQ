@@ -44,7 +44,6 @@
 
 | Item | Notes |
 |---|---|
-| **Task status filter pills on Tasks page** | Add All / Pending / Planned / In Progress / Done filter pills above the task list. Match the Notifications page UX exactly: same `rounded-full` pill style, `bg-brand-600 text-white` for active, ghost border for inactive, client-side filter via `useMemo`. No backend changes needed — filter against the already-fetched task list. |
 | Assign task to another user | UI for `shared_with`; consider switching to a join table later. |
 | Due dates + reminder notification job | Reuse the lifecycle notification model. |
 
@@ -101,6 +100,8 @@
 | Staging environment (`staging.whatiskali.dev`) | Separate Docker Compose project on Mac Mini; Neon Postgres cloud DB; seed data live. |
 | Branch protection on `main` + `staging` | Dismiss stale reviews; 0 required approvals (solo dev — raise to 1 when second dev joins full-time). |
 | Feedback inbox Copilot prompt | `/feedback-inbox` — hits production API, workspace-relative creds path, works on any machine. |
+| **Task status filter pills** | All / In Progress / Planned / Pending / Done pills on Tasks page. Client-side `useMemo` filter. Matches Notifications page UX (same pill styles). |
+| **Task list sort order** | Tasks sorted by status: In Progress → Planned → Pending → Done. Applied before rendering and within any active filter. |
 
 ---
 
