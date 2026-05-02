@@ -24,14 +24,14 @@
 }
 
 (staging-app) {
-    # Route /api/* to the staging backend container
+    # Staging containers are on a separate Docker network.
+    # Route via host-mapped ports instead of container names.
     handle /api/* {
-        reverse_proxy projectiq-staging-backend-1:8000
+        reverse_proxy host.docker.internal:8002
     }
 
-    # All other traffic goes to the staging frontend container
     handle {
-        reverse_proxy projectiq-staging-frontend-1:3000
+        reverse_proxy host.docker.internal:3002
     }
 
     encode gzip
