@@ -1,7 +1,7 @@
 # ProjectIQ — System Design Overview
 
 > **Status:** Proof of Concept — live at https://www.whatiskali.dev (Cloudflare Tunnel)
-> **Last Updated:** April 2026
+> **Last Updated:** May 2026
 > **Stack:** Next.js · FastAPI · LangGraph · Ollama (Gemma 4) · PostgreSQL 16 · Redis 7 · Caddy · Docker Compose · Cloudflare Tunnel
 
 ---
@@ -50,6 +50,11 @@ ProjectIQ is an AI-assisted employee scheduling and task-management app for smal
 | Dark mode (Tailwind `class` strategy, `ThemeProvider`, sun/moon toggle, Settings modal) | ✅ |
 | Caddy reverse proxy + Docker Compose orchestration | ✅ |
 | Cloudflare Tunnel | ✅ live at https://www.whatiskali.dev |
+| Alembic migrations (initial schema, asyncpg SSL fix for Neon) | ✅ |
+| Dev seed script (`backend/scripts/seed_dev.py`) | ✅ |
+| GitHub Actions CI/CD (self-hosted runner, `deploy-staging.yml`, `deploy-prod.yml`) | ✅ |
+| Staging environment (`staging.whatiskali.dev`, Neon Postgres cloud DB) | ✅ |
+| Branch protection on `main` + `staging` (0 required approvals, stale review dismissal) | ✅ |
 | RBAC enforcement on sensitive UI actions (Add/Delete Member, Add Project) | ✅ |
 | TopBar avatar dropdown (Sign Out, Change Password) | ✅ |
 | FastAPI Swagger/ReDoc gated behind `DEBUG=true` | ✅ |
@@ -127,7 +132,7 @@ caddy:80
 | SQLAlchemy (async) | ORM | 2.x |
 | asyncpg | Postgres driver | latest |
 | Pydantic | Schemas & validation | 2.x |
-| Alembic | Schema migrations (skeleton present) | latest |
+| Alembic | Schema migrations | latest |
 | passlib + bcrypt 4.0.1 | Password hashing | pinned |
 | python-jose | JWT | latest |
 | structlog | Structured logging | latest |
@@ -224,19 +229,19 @@ backend/
 
 ### 4.3 Database
 
-PostgreSQL 16 (Docker, named volume `pgdata`). The lifespan handler runs:
+PostgreSQL 16 (Docker, named volume `pgdata`) for production/local. Neon Postgres 17 (cloud) for staging.
 
-1. `Base.metadata.create_all` for new tables, then
-2. Idempotent `ALTER TABLE` migrations (all `ADD COLUMN IF NOT EXISTS`):
-   - `notifications.task_id`, `notifications.task_status`, `notifications.archived`
-   - `projects` table (created if not exists)
-   - `tasks.project_id` FK → `projects.id`
-   - `tasks.start_date`, `tasks.due_date`, `tasks.estimated_hours`
-   - `assignments` table (created if not exists)
-   - `ALTER TYPE taskstatus ADD VALUE IF NOT EXISTS 'planned'`
-   - `DROP TABLE IF EXISTS shifts CASCADE` (legacy cleanup)
+Schema is managed entirely by **Alembic**. `Base.metadata.create_all` and the `ALTER IF NOT EXISTS` bootstrap block were removed from `lifespan` in Phase 2. Migrations live in `backend/alembic/versions/`.
 
-This is a temporary shortcut. Alembic is scaffolded and will replace this before any non-dev deployment.
+On first clone (after `docker compose up -d`):
+
+```bash
+docker compose exec backend alembic upgrade head
+```
+
+The staging and production deploy workflows run `alembic upgrade head` automatically before restarting containers.
+
+**asyncpg + Neon SSL note:** `asyncpg` does not accept `sslmode=require` as a URL query parameter. `database.py` and `alembic/env.py` strip the parameter and pass `ssl=ssl.create_default_context()` via `connect_args` instead.
 
 ### 4.4 Bots (`bots/`)
 
@@ -715,6 +720,40 @@ Same Compose stack runs on a Linux VPS unchanged; differences:
 
 ---
 
+## 11.9 CI/CD and Staging Environment
+
+### Branch strategy
+
+```
+<dev-branch>  →  PR  →  staging  →  PR  →  main
+```
+
+- All development happens on personal dev branches (e.g. `jaleman-dev`, `mshatit-dev`).
+- PRs to `staging` auto-deploy to `staging.whatiskali.dev` via GitHub Actions.
+- PRs to `main` require manual approval in the GitHub Actions `production` environment before deploying to `whatiskali.dev`.
+
+### GitHub Actions workflows
+
+| Workflow | Trigger | Runner | Environment |
+|---|---|---|---|
+| `deploy-staging.yml` | push to `staging` | `self-hosted` (Mac Mini) | `staging` |
+| `deploy-prod.yml` | push to `main` | `self-hosted` (Mac Mini) | `production` (required approval) |
+
+Both workflows: `git reset --hard origin/<branch>` → `alembic upgrade head` → `docker compose up -d --build`.
+
+### Staging stack
+
+- Runs at `/Users/labanlaro/Projects/project-iq-staging` on the Mac Mini.
+- `COMPOSE_PROJECT_NAME=projectiq-staging` keeps containers separate from production.
+- Database: **Neon Postgres 17** (cloud) — configured via `DATABASE_URL` override in `docker-compose.override.yml` (gitignored in the staging folder).
+- Frontend: host port 3002 · Backend: host port 8002.
+- Caddy (production container) routes `staging.whatiskali.dev` → `host.docker.internal:8002/3002`.
+- Seed data: `joe@example.com` / `password123`.
+
+### Branch protection
+
+Both `main` and `staging` have branch protection enabled (dismiss stale reviews, 0 required approvals while team is solo — bump to 1 when second developer is active full-time).
+
 ## 12. Roadmap
 
 The previous embedded checklist has been moved to **[PRODUCT_BACKLOG.md](./PRODUCT_BACKLOG.md)**. That file is the source of truth for upcoming work and should be updated as items move through the funnel.
@@ -749,10 +788,10 @@ Reusable task templates invoked on-demand in Copilot Chat by typing `/prompt-nam
 | `feedback-inbox` | `/feedback-inbox` | Log in, fetch the feedback inbox, display all entries with reply status, send developer replies interactively — all without leaving VS Code. |
 
 **How it works:**
-1. Reads `/.projectiq-creds` (email + password, two lines, `chmod 600`) from the workspace root.
-2. POSTs to `POST /api/auth/login` on every run to get a fresh JWT — no stale token problem.
+1. Reads `.projectiq-creds` (email + password, two lines, `chmod 600`) from the workspace root — path resolved via `git rev-parse --show-toplevel`, works on any machine.
+2. POSTs to `POST /api/auth/login` on **https://whatiskali.dev** (production) on every run to get a fresh JWT.
 3. Fetches `GET /api/feedback/` and formats entries as a readable list.
-4. Asks which entry to reply to and sends `PATCH /api/feedback/{id}/reply`.
+4. Asks which entry to act on: **reply** or **done** toggle.
 
 **Credentials file format** (`.projectiq-creds`, gitignored):
 ```
