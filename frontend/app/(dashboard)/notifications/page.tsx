@@ -7,7 +7,7 @@ import type { Notification, TaskStatus } from "@/lib/types";
 import { format } from "date-fns";
 import { Check, Archive, ArchiveRestore } from "lucide-react";
 
-const STATUS_STYLES: Record<TaskStatus, string> = {
+const STATUS_STYLES: Partial<Record<TaskStatus, string>> = {
   pending: "bg-slate-100 text-slate-600",
   in_progress: "bg-yellow-100 text-yellow-700",
   done: "bg-green-100 text-green-700",

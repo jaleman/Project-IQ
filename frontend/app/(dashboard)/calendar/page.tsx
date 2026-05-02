@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi, eventsApi, projectsApi, tasksApi } from "@/lib/api";
 import type { Event, Project, ProjectDetail, ProjectStatus, Task, TaskStatus, User } from "@/lib/types";
@@ -28,10 +29,12 @@ const TASK_STATUS_BADGE: Record<string, string> = {
   pending: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  archived: "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500",
 };
 
 export default function CalendarPage() {
   const qc = useQueryClient();
+  const router = useRouter();
 
   const { data: meRes } = useQuery({ queryKey: ["me"], queryFn: () => authApi.me(), retry: false });
   const isAdminOrLeader = ["admin", "leader"].includes(
@@ -50,6 +53,7 @@ export default function CalendarPage() {
     if (t.project_id != null) (acc[t.project_id] ??= []).push(t);
     return acc;
   }, {});
+  const allTasksById = Object.fromEntries(allTasks.map((t) => [t.id, t]));
 
   // Which project is expanded
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -236,28 +240,37 @@ export default function CalendarPage() {
                     ) : detail.tasks.length === 0 ? (
                       <p className="text-xs text-slate-400 dark:text-slate-500">No tasks assigned to this project yet.</p>
                     ) : (
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-slate-400 uppercase">
-                            <th className="text-left pb-1">Task</th>
-                            <th className="text-left pb-1">Assigned to</th>
-                            <th className="text-left pb-1">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {detail.tasks.map((t) => (
-                            <tr key={t.id}>
-                            <td className="py-1.5 pr-3 font-medium text-slate-700 dark:text-slate-200">{t.title}</td>
-                            <td className="py-1.5 pr-3 text-slate-500 dark:text-slate-400">{t.user_name}</td>
-                              <td className="py-1.5">
-                                <span className={`px-1.5 py-0.5 rounded-full font-medium ${TASK_STATUS_BADGE[t.status]}`}>
+                      <div className="space-y-2">
+                        {detail.tasks.map((t) => {
+                          const full = allTasksById[t.id];
+                          return (
+                            <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-100 dark:border-slate-600 shadow-sm">
+                              <div className="flex items-start justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/tasks?task=${t.id}`)}
+                                  className="font-medium text-slate-800 dark:text-slate-100 text-xs hover:text-brand-600 dark:hover:text-brand-400 text-left leading-snug"
+                                >
+                                  {t.title}
+                                </button>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${TASK_STATUS_BADGE[t.status] ?? ""}`}>
                                   {t.status.replace("_", " ")}
                                 </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                              {t.notes && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">{t.notes}</p>}
+                              <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                <span className="text-xs text-slate-400 dark:text-slate-500">{t.user_name}</span>
+                                {full?.due_date && (
+                                  <span className="text-xs text-orange-500 dark:text-orange-400">Due {format(new Date(full.due_date), "PP")}</span>
+                                )}
+                                {full?.estimated_hours && (
+                                  <span className="text-xs text-slate-400 dark:text-slate-500">{full.estimated_hours}h est.</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 )}
