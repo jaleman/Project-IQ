@@ -364,10 +364,12 @@ export default function TasksPage() {
   const [assignTask, setAssignTask] = useState<Task | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilterKey>("all");
   const [view, setView] = useState<"list" | "kanban">("list");
+  const [viewMounted, setViewMounted] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("tasks-view");
     if (saved === "list" || saved === "kanban") setView(saved);
+    setViewMounted(true);
   }, []);
 
   const handleSetView = (v: "list" | "kanban") => {
@@ -429,6 +431,7 @@ export default function TasksPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tasks</h1>
           <div className="flex items-center gap-2">
+            {viewMounted && (
             <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
               <button
                 onClick={() => handleSetView("list")}
@@ -451,6 +454,7 @@ export default function TasksPage() {
                 <Columns2 size={14} /> Board
               </button>
             </div>
+            )}
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition"
@@ -481,7 +485,7 @@ export default function TasksPage() {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
-      {isLoading ? (
+      {isLoading || !viewMounted ? (
         <p className="text-slate-500">Loading tasks...</p>
       ) : view === "kanban" ? (
         /* ── Kanban board ─────────────────────────────────────── */
