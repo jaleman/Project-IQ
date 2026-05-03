@@ -17,8 +17,8 @@ class FeedbackReply(BaseModel):
 
 class FeedbackOut(BaseModel):
     id: int
-    user_id: int
-    user_name: str
+    user_id: Optional[int] = None
+    user_name: Optional[str] = None
     type: FeedbackType
     notes: str
     reply: Optional[str] = None

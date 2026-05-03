@@ -22,6 +22,6 @@ class EventUpdate(BaseModel):
 
 class EventOut(EventBase):
     id: int
-    created_by: int
+    created_by: Optional[int] = None
 
     model_config = {"from_attributes": True}

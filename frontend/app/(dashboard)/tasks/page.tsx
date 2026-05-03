@@ -498,7 +498,9 @@ export default function TasksPage() {
                           className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${ASSIGN_STATUS_STYLES[a.status]}`}
                           title={`${a.allocation_pct}% · ${a.status}`}
                         >
-                          {userMap[a.user_id] ?? `User ${a.user_id}`}
+                          {a.user_id == null
+                            ? "Unassigned"
+                            : userMap[a.user_id] ?? `User ${a.user_id}`}
                           <span className="opacity-60">{a.allocation_pct}%</span>
                           {t.status !== "done" && t.status !== "archived" && (
                             <button

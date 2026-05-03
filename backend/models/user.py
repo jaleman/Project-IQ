@@ -27,7 +27,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     assignments: Mapped[list["Assignment"]] = relationship(
-        "Assignment", back_populates="user", lazy="selectin"
+        "Assignment", back_populates="user", lazy="selectin", passive_deletes=True
     )
     tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user", lazy="selectin")
     notifications: Mapped[list["Notification"]] = relationship(

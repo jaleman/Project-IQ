@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -13,4 +14,6 @@ class Event(Base):
     title: Mapped[str] = mapped_column(String(255))
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     required_staff: Mapped[int] = mapped_column(default=1)
-    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_by: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
