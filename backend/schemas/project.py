@@ -24,8 +24,8 @@ class ProjectTaskOut(BaseModel):
     title: str
     notes: Optional[str]
     status: TaskStatus
-    user_id: int
-    user_name: str
+    user_id: Optional[int] = None
+    user_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -35,7 +35,7 @@ class ProjectOut(BaseModel):
     name: str
     description: Optional[str]
     status: ProjectStatus
-    created_by: int
+    created_by: Optional[int] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

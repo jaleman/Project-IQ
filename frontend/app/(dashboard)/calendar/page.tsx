@@ -259,7 +259,7 @@ export default function CalendarPage() {
                               </div>
                               {t.notes && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">{t.notes}</p>}
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                <span className="text-xs text-slate-400 dark:text-slate-500">{t.user_name}</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">{t.user_name ?? "Unassigned"}</span>
                                 {full?.due_date && (
                                   <span className="text-xs text-orange-500 dark:text-orange-400">Due {format(new Date(full.due_date), "PP")}</span>
                                 )}

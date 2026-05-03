@@ -19,7 +19,9 @@ class Feedback(Base):
     __tablename__ = "feedback"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     type: Mapped[FeedbackType] = mapped_column(Enum(FeedbackType))
     notes: Mapped[str] = mapped_column(Text)
     reply: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

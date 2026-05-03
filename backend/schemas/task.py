@@ -35,7 +35,7 @@ class TaskUpdate(BaseModel):
 
 class TaskOut(TaskBase):
     id: int
-    user_id: int
+    user_id: Optional[int] = None
     status: TaskStatus
     created_at: datetime
 

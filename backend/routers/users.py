@@ -1,10 +1,12 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from models.assignment import Assignment
+from models.notification import Notification
 from models.user import User, UserRole
 from routers.deps import get_current_user, hash_password
 from routers.utils import err, ok
@@ -102,6 +104,11 @@ async def delete_user(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    # Delete assignments and notifications explicitly so the ORM doesn't try to
+    # NULL out user_id (assignments are NOT NULL; notifications are personal).
+    # Tasks/events/projects/feedback use ON DELETE SET NULL via the DB.
+    await db.execute(delete(Assignment).where(Assignment.user_id == user_id))
+    await db.execute(delete(Notification).where(Notification.user_id == user_id))
     await db.delete(user)
     await db.commit()
     return ok({"message": "User deleted"})
