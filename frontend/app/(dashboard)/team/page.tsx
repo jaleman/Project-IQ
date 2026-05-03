@@ -36,6 +36,13 @@ export default function TeamPage() {
     onError: (e: Error) => alert(`Failed to delete user: ${e.message}`),
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: number; role: UserRole }) =>
+      usersApi.update(id, { role }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    onError: (e: Error) => alert(`Failed to update role: ${e.message}`),
+  });
+
   const handleDelete = (u: User) => {
     if (confirm(`Delete ${u.name} (${u.email})? This cannot be undone.`)) {
       deleteMutation.mutate(u.id);
@@ -94,9 +101,24 @@ export default function TeamPage() {
                   <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{u.name}</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{u.email}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[u.role]}`}>
-                      {u.role}
-                    </span>
+                    {isAdmin && me?.id !== u.id ? (
+                      <select
+                        value={u.role}
+                        onChange={(e) =>
+                          updateRoleMutation.mutate({ id: u.id, role: e.target.value as UserRole })
+                        }
+                        disabled={updateRoleMutation.isPending}
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 ${ROLE_BADGE[u.role]}`}
+                      >
+                        <option value="member">member</option>
+                        <option value="leader">leader</option>
+                        <option value="admin">admin</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[u.role]}`}>
+                        {u.role}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400"}`}>
