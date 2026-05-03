@@ -365,6 +365,16 @@ export default function TasksPage() {
   const [taskFilter, setTaskFilter] = useState<TaskFilterKey>("all");
   const [view, setView] = useState<"list" | "kanban">("list");
 
+  useEffect(() => {
+    const saved = localStorage.getItem("tasks-view");
+    if (saved === "list" || saved === "kanban") setView(saved);
+  }, []);
+
+  const handleSetView = (v: "list" | "kanban") => {
+    setView(v);
+    localStorage.setItem("tasks-view", v);
+  };
+
   const [highlightId, setHighlightId] = useState<number | null>(null);
   const taskCardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -421,7 +431,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
               <button
-                onClick={() => setView("list")}
+                onClick={() => handleSetView("list")}
                 className={`px-3 py-1.5 text-xs flex items-center gap-1.5 transition ${
                   view === "list"
                     ? "bg-brand-600 text-white"
@@ -431,7 +441,7 @@ export default function TasksPage() {
                 <LayoutList size={14} /> List
               </button>
               <button
-                onClick={() => setView("kanban")}
+                onClick={() => handleSetView("kanban")}
                 className={`px-3 py-1.5 text-xs flex items-center gap-1.5 transition ${
                   view === "kanban"
                     ? "bg-brand-600 text-white"
